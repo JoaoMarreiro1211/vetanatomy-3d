@@ -1,0 +1,46 @@
+databases:
+  - name: vetanatomy-db
+    databaseName: vetanatomy
+    user: vetanatomy
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: vetanatomy-api
+    runtime: docker
+    plan: starter
+    dockerContext: ./apps/api
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    disk:
+      name: vetanatomy-api-storage
+      mountPath: /app/storage
+      sizeGB: 1
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: vetanatomy-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: BACKEND_CORS_ORIGINS
+        sync: false
+      - key: REFRESH_TOKEN_COOKIE_SECURE
+        value: "True"
+      - key: REFRESH_TOKEN_COOKIE_SAMESITE
+        value: "none"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "480"
+      - key: LOCAL_STORAGE_PATH
+        value: /app/storage
+
+  - type: web
+    name: vetanatomy-web
+    runtime: docker
+    plan: starter
+    dockerContext: ./apps/web
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        sync: false

@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile=false",
+  "buildCommand": "pnpm --filter vetanatomy-web build",
+  "outputDirectory": "apps/web/.next"
+}

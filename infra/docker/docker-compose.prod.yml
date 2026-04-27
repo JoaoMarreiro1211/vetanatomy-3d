@@ -1,0 +1,72 @@
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-vetanatomy}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      POSTGRES_DB: "${POSTGRES_DB:-vetanatomy}"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vetanatomy} -d ${POSTGRES_DB:-vetanatomy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_SERVER: "db"
+      POSTGRES_USER: "${POSTGRES_USER:-vetanatomy}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+      POSTGRES_DB: "${POSTGRES_DB:-vetanatomy}"
+      SECRET_KEY: "${SECRET_KEY:?SECRET_KEY is required}"
+      BACKEND_CORS_ORIGINS: '["https://${WEB_DOMAIN:?WEB_DOMAIN is required}"]'
+      REFRESH_TOKEN_COOKIE_SECURE: "True"
+      REFRESH_TOKEN_COOKIE_SAMESITE: "none"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "${ACCESS_TOKEN_EXPIRE_MINUTES:-480}"
+      LOCAL_STORAGE_PATH: "/app/storage"
+    volumes:
+      - api-storage:/app/storage
+
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE: "https://${API_DOMAIN:?API_DOMAIN is required}/api/v1"
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      PORT: "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+      - api
+    environment:
+      WEB_DOMAIN: "${WEB_DOMAIN:?WEB_DOMAIN is required}"
+      API_DOMAIN: "${API_DOMAIN:?API_DOMAIN is required}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  api-storage:
+  caddy-data:
+  caddy-config:

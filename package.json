@@ -1,0 +1,22 @@
+{
+  "name": "vetanatomy-3d",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test"
+  },
+  "dependencies": {
+    "next": "14.2.35",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.0"
+  }
+}
