@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowLeft, Bell, CheckCircle2, ClipboardList, FileImage, Printer, Stethoscope } from "lucide-react";
+import { Activity, ArrowLeft, Bell, CheckCircle2, FileImage, HeartPulse, Printer, Stethoscope } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ import { StatCard } from "../../../components/ui/stat-card";
 import { api } from "../../../lib/api";
 
 type Point = { x: number; y: number; z: number };
-type Tab = "anatomy" | "imaging" | "plan";
+type Tab = "timeline" | "anatomy" | "imaging" | "plan";
 type CareProtocol = {
   title: string;
   type: "follow_up" | "vaccine" | "imaging" | "medication" | "lab" | "procedure";
@@ -53,9 +53,22 @@ const planSchema = z.object({
   steps: z.string().trim().optional(),
 });
 
+const clinicalNoteSchema = z.object({
+  title: z.string().trim().min(2, "Informe um titulo para a evolucao."),
+  subjective: z.string().trim().optional(),
+  objective: z.string().trim().optional(),
+  assessment: z.string().trim().optional(),
+  plan: z.string().trim().optional(),
+  temperature_c: z.coerce.number().optional(),
+  heart_rate_bpm: z.coerce.number().optional(),
+  respiratory_rate_bpm: z.coerce.number().optional(),
+  pain_score: z.coerce.number().min(0).max(10).optional(),
+});
+
 type AnnotationForm = z.infer<typeof annotationSchema>;
 type ImagingForm = z.infer<typeof imagingSchema>;
 type PlanForm = z.infer<typeof planSchema>;
+type ClinicalNoteForm = z.infer<typeof clinicalNoteSchema>;
 
 const severityLabel: Record<string, string> = {
   mild: "Leve",
@@ -64,6 +77,7 @@ const severityLabel: Record<string, string> = {
 };
 
 const tabs: Array<{ id: Tab; label: string }> = [
+  { id: "timeline", label: "Timeline SOAP" },
   { id: "anatomy", label: "Anatomia 3D" },
   { id: "imaging", label: "Exames" },
   { id: "plan", label: "Plano cirurgico" },
@@ -117,7 +131,7 @@ export default function PatientPage({ params }: { params: { id: string } }) {
   const id = params.id;
   const queryClient = useQueryClient();
   const [selectedPoint, setSelectedPoint] = useState<Point | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>("anatomy");
+  const [activeTab, setActiveTab] = useState<Tab>("timeline");
   const [diagnosticFile, setDiagnosticFile] = useState<File | null>(null);
   const [selectedStudyUrl, setSelectedStudyUrl] = useState<string | null>(null);
 
@@ -132,6 +146,20 @@ export default function PatientPage({ params }: { params: { id: string } }) {
   const planForm = useForm<PlanForm>({
     resolver: zodResolver(planSchema),
     defaultValues: { structure: "", objective: "", risk: "Baixo", steps: "" },
+  });
+  const clinicalNoteForm = useForm<ClinicalNoteForm>({
+    resolver: zodResolver(clinicalNoteSchema),
+    defaultValues: {
+      title: "Evolucao SOAP",
+      subjective: "",
+      objective: "",
+      assessment: "",
+      plan: "",
+      temperature_c: undefined,
+      heart_rate_bpm: undefined,
+      respiratory_rate_bpm: undefined,
+      pain_score: undefined,
+    },
   });
 
   const { data: patient, isLoading: patientLoading, isError: patientError } = useQuery<any>({
@@ -153,6 +181,10 @@ export default function PatientPage({ params }: { params: { id: string } }) {
   const { data: surgicalPlans = [], isLoading: plansLoading } = useQuery<any[]>({
     queryKey: ["surgical-plans", id],
     queryFn: () => api.surgicalPlansByPatient(id),
+  });
+  const { data: clinicalNotes = [], isLoading: notesLoading } = useQuery<any[]>({
+    queryKey: ["clinical-notes", id],
+    queryFn: () => api.clinicalNotesByPatient(id),
   });
   const { data: reminders = [], isLoading: remindersLoading } = useQuery<any[]>({
     queryKey: ["reminders", id],
@@ -246,6 +278,40 @@ export default function PatientPage({ params }: { params: { id: string } }) {
     },
   });
 
+  const createClinicalNote = useMutation({
+    mutationFn: (formData: ClinicalNoteForm) =>
+      api.createClinicalNote({
+        patient_id: Number(id),
+        note_type: "soap",
+        title: formData.title,
+        subjective: formData.subjective || "",
+        objective: formData.objective || "",
+        assessment: formData.assessment || "",
+        plan: formData.plan || "",
+        vitals: {
+          temperature_c: formData.temperature_c || null,
+          heart_rate_bpm: formData.heart_rate_bpm || null,
+          respiratory_rate_bpm: formData.respiratory_rate_bpm || null,
+          pain_score: formData.pain_score || null,
+        },
+        created_by: null,
+      }),
+    onSuccess: () => {
+      clinicalNoteForm.reset({
+        title: "Evolucao SOAP",
+        subjective: "",
+        objective: "",
+        assessment: "",
+        plan: "",
+        temperature_c: undefined,
+        heart_rate_bpm: undefined,
+        respiratory_rate_bpm: undefined,
+        pain_score: undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["clinical-notes", id] });
+    },
+  });
+
   const createReminder = useMutation({
     mutationFn: (payload: any) => api.createReminder(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", id] }),
@@ -326,7 +392,7 @@ export default function PatientPage({ params }: { params: { id: string } }) {
       />
 
       <div className="mt-6 grid gap-4 md:grid-cols-5">
-        <StatCard label="Anotacoes" value={annotationsLoading ? "..." : annotations.length} icon={<ClipboardList className="h-5 w-5" />} helper="Achados no modelo 3D" />
+        <StatCard label="Evolucoes" value={notesLoading ? "..." : clinicalNotes.length} icon={<HeartPulse className="h-5 w-5" />} helper="SOAP e sinais vitais" />
         <StatCard label="Graves" value={severeCount} icon={<Activity className="h-5 w-5" />} helper="Prioridade clinica" />
         <StatCard label="Exames" value={studiesLoading ? "..." : studies.length} icon={<FileImage className="h-5 w-5" />} helper="Imagem e DICOM" />
         <StatCard label="Planos" value={plansLoading ? "..." : surgicalPlans.length} icon={<Stethoscope className="h-5 w-5" />} helper="Planejamento cirurgico" />
@@ -349,6 +415,49 @@ export default function PatientPage({ params }: { params: { id: string } }) {
               </button>
             ))}
           </div>
+
+          {activeTab === "timeline" ? (
+            <div className="grid gap-5">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Nova evolucao SOAP</CardTitle>
+                  <p className="text-sm text-muted-foreground">Registre subjetivo, objetivo, avaliacao, plano e sinais vitais em uma linha do tempo clinica.</p>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={clinicalNoteForm.handleSubmit((data) => createClinicalNote.mutate(data))} className="grid gap-4">
+                    <FormInput label="Titulo" registration={clinicalNoteForm.register("title")} error={clinicalNoteForm.formState.errors.title?.message} />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <SoapTextArea label="S - Subjetivo" registration={clinicalNoteForm.register("subjective")} />
+                      <SoapTextArea label="O - Objetivo" registration={clinicalNoteForm.register("objective")} />
+                      <SoapTextArea label="A - Avaliacao" registration={clinicalNoteForm.register("assessment")} />
+                      <SoapTextArea label="P - Plano" registration={clinicalNoteForm.register("plan")} />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-4">
+                      <FormInput label="Temp. C" registration={clinicalNoteForm.register("temperature_c")} />
+                      <FormInput label="FC bpm" registration={clinicalNoteForm.register("heart_rate_bpm")} />
+                      <FormInput label="FR rpm" registration={clinicalNoteForm.register("respiratory_rate_bpm")} />
+                      <FormInput label="Dor 0-10" registration={clinicalNoteForm.register("pain_score")} error={clinicalNoteForm.formState.errors.pain_score?.message} />
+                    </div>
+                    {createClinicalNote.isError ? (
+                      <Alert className="border-danger/35 bg-[#FFF6F6]">
+                        <AlertTitle>Evolucao nao salva</AlertTitle>
+                        <AlertDescription>Revise os campos e tente novamente.</AlertDescription>
+                      </Alert>
+                    ) : null}
+                    <Button type="submit" disabled={createClinicalNote.isPending}>
+                      {createClinicalNote.isPending ? "Salvando..." : "Salvar evolucao SOAP"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <RecordList title="Timeline clinica" loading={notesLoading} empty="Nenhuma evolucao registrada.">
+                {clinicalNotes.map((note) => (
+                  <ClinicalNoteCard key={note.id} note={note} />
+                ))}
+              </RecordList>
+            </div>
+          ) : null}
 
           {activeTab === "anatomy" ? (
             <div className="grid gap-4">
@@ -590,6 +699,52 @@ function FormInput({ label, registration, placeholder, error }: { label: string;
       <Input placeholder={placeholder} aria-invalid={Boolean(error)} {...registration} />
       {error ? <span className="mt-1 block text-sm text-danger">{error}</span> : null}
     </label>
+  );
+}
+
+function SoapTextArea({ label, registration }: { label: string; registration: any }) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <textarea rows={4} className="mt-1 w-full rounded-md border border-border px-3 py-2.5 text-sm focus:border-primary-strong focus:outline-none focus:ring-4 focus:ring-primary/25" {...registration} />
+    </label>
+  );
+}
+
+function ClinicalNoteCard({ note }: { note: any }) {
+  const vitals = note.vitals || {};
+  const vitalItems = [
+    vitals.temperature_c ? `${vitals.temperature_c} C` : null,
+    vitals.heart_rate_bpm ? `FC ${vitals.heart_rate_bpm}` : null,
+    vitals.respiratory_rate_bpm ? `FR ${vitals.respiratory_rate_bpm}` : null,
+    vitals.pain_score || vitals.pain_score === 0 ? `Dor ${vitals.pain_score}/10` : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="rounded-md border border-border p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="font-semibold text-foreground">{note.title}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{new Date(note.created_at).toLocaleString("pt-BR")}</div>
+        </div>
+        {vitalItems.length ? <Badge variant="muted">{vitalItems.join(" | ")}</Badge> : null}
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <SoapBlock label="S" value={note.subjective} />
+        <SoapBlock label="O" value={note.objective} />
+        <SoapBlock label="A" value={note.assessment} />
+        <SoapBlock label="P" value={note.plan} />
+      </div>
+    </div>
+  );
+}
+
+function SoapBlock({ label, value }: { label: string; value?: string }) {
+  return (
+    <div className="rounded-md bg-secondary-surface p-3">
+      <div className="text-xs font-semibold text-muted-foreground">{label}</div>
+      <p className="mt-1 text-sm leading-6 text-foreground">{value || "-"}</p>
+    </div>
   );
 }
 

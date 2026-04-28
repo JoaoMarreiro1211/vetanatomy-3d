@@ -80,6 +80,8 @@ export const api = {
   createImagingFinding: (payload: any) => request('/imaging/findings', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   surgicalPlansByPatient: (patientId: string | number) => request(`/surgical-plans/by_patient/${patientId}`),
   createSurgicalPlan: (payload: any) => request('/surgical-plans/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  clinicalNotesByPatient: (patientId: string | number) => request(`/clinical-notes/by_patient/${patientId}`),
+  createClinicalNote: (payload: any) => request('/clinical-notes/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   reminders: (params?: { dueBefore?: string; includeDone?: boolean }) => {
     const search = new URLSearchParams()
     if (params?.dueBefore) search.set('due_before', params.dueBefore)

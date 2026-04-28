@@ -89,6 +89,21 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     )
     assert plan_response.status_code == 200
 
+    note_response = client.post(
+        f"{settings.API_V1_STR}/clinical-notes/",
+        json={
+            "patient_id": patient["id"],
+            "title": "Evolucao SOAP",
+            "subjective": "Tutor relata melhora parcial.",
+            "objective": "Paciente alerta, hidratado, dor leve.",
+            "assessment": "Evolucao favoravel.",
+            "plan": "Manter medicacao e retorno em 7 dias.",
+            "vitals": {"temperature_c": 38.5, "heart_rate_bpm": 88, "pain_score": 2},
+        },
+    )
+    assert note_response.status_code == 200
+    assert note_response.json()["vitals"]["pain_score"] == 2
+
     reminder_response = client.post(
         f"{settings.API_V1_STR}/reminders/",
         json={
@@ -108,6 +123,7 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     assert len(client.get(f"{settings.API_V1_STR}/imaging/studies/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/imaging/findings/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/surgical-plans/by_patient/{patient['id']}").json()) == 1
+    assert len(client.get(f"{settings.API_V1_STR}/clinical-notes/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/reminders/by_patient/{patient['id']}").json()) == 1
 
     done = client.patch(f"{settings.API_V1_STR}/reminders/{reminder['id']}", json={"is_done": True})
@@ -148,6 +164,11 @@ def test_clinical_records_reject_missing_parents(client):
     assert client.post(
         f"{settings.API_V1_STR}/surgical-plans/",
         json={"patient_id": 999, "structure": "Torax"},
+    ).status_code == 404
+
+    assert client.post(
+        f"{settings.API_V1_STR}/clinical-notes/",
+        json={"patient_id": 999, "title": "SOAP invalido"},
     ).status_code == 404
 
     assert client.post(

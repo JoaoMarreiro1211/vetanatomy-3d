@@ -15,4 +15,5 @@ from app.models.attachment import Attachment
 from app.models.audit_log import AuditLog
 from app.models.permission import Permission
 from app.models.refresh_token import RefreshToken
+from app.models.clinical_note import ClinicalNote
 from app.models.clinical_reminder import ClinicalReminder

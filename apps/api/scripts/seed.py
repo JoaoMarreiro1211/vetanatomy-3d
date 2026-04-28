@@ -7,6 +7,7 @@ from app.models import (
     AnatomicalModelTemplate,
     AnatomicalRegion,
     Attachment,
+    ClinicalNote,
     ClinicalReminder,
     DICOMSeries,
     DICOMStudy,
@@ -440,6 +441,27 @@ def seed() -> None:
                         due_date=date(2026, 4, 28),
                         priority=priority,
                         notes=f"Pendencia demonstrativa vinculada ao caso {case['record_number']}.",
+                        created_by=1,
+                    )
+                )
+                db.commit()
+
+            if not db.query(ClinicalNote).filter(ClinicalNote.patient_id == patient.id).first():
+                db.add(
+                    ClinicalNote(
+                        patient_id=patient.id,
+                        note_type="soap",
+                        title=f"Evolucao inicial - {case['study']}",
+                        subjective=f"Paciente {case['name']} apresentado para avaliacao. Queixa principal relacionada a {case['plan'][0].lower()}.",
+                        objective=f"Peso {case['weight']} kg. Exame {case['modality']} registrado. Achado principal: {case['finding']}",
+                        assessment=f"Hipotese/avaliacao: {case['plan'][1]}. Risco clinico: {case['plan'][2]}.",
+                        plan=case["plan"][3],
+                        vitals={
+                            "temperature_c": 38.4,
+                            "heart_rate_bpm": 96,
+                            "respiratory_rate_bpm": 28,
+                            "pain_score": 3 if case["plan"][2] == "Baixo" else 5 if case["plan"][2] == "Moderado" else 7,
+                        },
                         created_by=1,
                     )
                 )

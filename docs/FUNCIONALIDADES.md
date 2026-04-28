@@ -31,6 +31,21 @@
 - Prontuario individual com resumo operacional.
 - Exportacao do prontuario por impressao/Salvar como PDF.
 
+## Prontuario Premium
+
+- Timeline clinica por paciente.
+- Registro SOAP:
+  - Subjetivo
+  - Objetivo
+  - Avaliacao
+  - Plano
+- Sinais vitais estruturados:
+  - Temperatura
+  - Frequencia cardiaca
+  - Frequencia respiratoria
+  - Escore de dor
+- Evolucoes demonstrativas criadas automaticamente no seed.
+
 ## Multiespecie
 
 - Grupos clinicos:
