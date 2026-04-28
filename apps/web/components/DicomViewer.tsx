@@ -15,11 +15,42 @@ function absoluteUrl(url: string) {
 export default function DicomViewer({ fileUrl }: DicomViewerProps) {
   const elementRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState("Selecione um estudo com arquivo para visualizar.");
+  const [contentType, setContentType] = useState("");
+  const [contentTypeChecked, setContentTypeChecked] = useState(false);
   const resolvedUrl = useMemo(() => (fileUrl ? absoluteUrl(fileUrl) : ""), [fileUrl]);
-  const isRegularImage = /\.(png|jpe?g|webp)$/i.test(resolvedUrl);
+  const hasImageExtension = /\.(png|jpe?g|webp)$/i.test(resolvedUrl);
+  const isRegularImage = hasImageExtension || contentType.startsWith("image/");
 
   useEffect(() => {
-    if (!resolvedUrl || isRegularImage || !elementRef.current) return;
+    let active = true;
+    setContentType("");
+    setContentTypeChecked(false);
+    setStatus(resolvedUrl ? "Verificando arquivo..." : "Selecione um estudo com arquivo para visualizar.");
+
+    async function detectContentType() {
+      if (!resolvedUrl || hasImageExtension) {
+        if (active) setContentTypeChecked(true);
+        return;
+      }
+      try {
+        const response = await fetch(resolvedUrl, { method: "HEAD", mode: "cors" });
+        if (!active) return;
+        setContentType(response.headers.get("content-type") || "");
+      } catch {
+        if (active) setContentType("");
+      } finally {
+        if (active) setContentTypeChecked(true);
+      }
+    }
+
+    detectContentType();
+    return () => {
+      active = false;
+    };
+  }, [hasImageExtension, resolvedUrl]);
+
+  useEffect(() => {
+    if (!resolvedUrl || isRegularImage || !contentTypeChecked || !elementRef.current) return;
 
     let active = true;
     let cornerstone: any;
@@ -62,7 +93,7 @@ export default function DicomViewer({ fileUrl }: DicomViewerProps) {
         }
       }
     };
-  }, [isRegularImage, resolvedUrl]);
+  }, [contentType, contentTypeChecked, isRegularImage, resolvedUrl]);
 
   if (!resolvedUrl) {
     return (

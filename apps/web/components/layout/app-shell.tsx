@@ -7,6 +7,7 @@ import {
   Bell,
   CalendarDays,
   ClipboardList,
+  Users,
   LayoutDashboard,
   LogIn,
   LogOut,
@@ -32,7 +33,8 @@ const navigation = [
   { href: "/patients", label: "Agenda clinica", icon: CalendarDays },
   { href: "/patients", label: "Internacao", icon: Stethoscope },
   { href: "/patients", label: "Alertas", icon: Bell },
-  { href: "/patients", label: "Configuracoes", icon: Settings },
+  { href: "/admin/users", label: "Usuarios", icon: Users },
+  { href: "/admin/users", label: "Configuracoes", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

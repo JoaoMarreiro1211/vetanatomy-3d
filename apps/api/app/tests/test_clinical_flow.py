@@ -31,6 +31,9 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     file_response = client.get(attachment["url"])
     assert file_response.status_code == 200
     assert file_response.content == b"DICM test payload"
+    head_response = client.head(attachment["url"])
+    assert head_response.status_code == 200
+    assert head_response.headers["content-type"].startswith("application/dicom")
 
     annotation_response = client.post(
         f"{settings.API_V1_STR}/annotations/",

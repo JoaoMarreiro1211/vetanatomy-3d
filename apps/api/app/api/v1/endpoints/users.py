@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.rbac import require_superuser
-from app.schemas.user import UserCreate, UserRead
+from app.schemas.user import AdminUserCreate, UserRead
 from app.services import user_service
 from app.models import User
 
@@ -17,6 +17,6 @@ def list_users(db: Session = Depends(get_db), current_user: User = Depends(requi
 
 
 @router.post("/", response_model=UserRead)
-def create_user(user_in: UserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_superuser)):
+def create_user(user_in: AdminUserCreate, db: Session = Depends(get_db), current_user: User = Depends(require_superuser)):
     user = user_service.create_user(db, user_in)
     return user

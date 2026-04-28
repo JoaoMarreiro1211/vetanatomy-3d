@@ -76,3 +76,16 @@ def attachment_content(attachment_id: int, db: Session = Depends(get_db)):
 
     headers = {"Content-Disposition": f'inline; filename="{attachment.filename}"'}
     return Response(content=attachment.file_data, media_type=attachment.content_type or "application/octet-stream", headers=headers)
+
+
+@router.head("/{attachment_id}/content")
+def attachment_content_head(attachment_id: int, db: Session = Depends(get_db)):
+    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    if not attachment or attachment.file_data is None:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    headers = {
+        "Content-Disposition": f'inline; filename="{attachment.filename}"',
+        "Content-Length": str(attachment.size_bytes or len(attachment.file_data)),
+    }
+    return Response(content=b"", media_type=attachment.content_type or "application/octet-stream", headers=headers)

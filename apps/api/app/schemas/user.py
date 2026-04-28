@@ -8,6 +8,10 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
 
 
+class AdminUserCreate(UserCreate):
+    is_superuser: bool = False
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

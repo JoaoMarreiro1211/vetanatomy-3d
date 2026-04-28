@@ -11,7 +11,12 @@ def create_user(db: Session, user_in: UserCreate) -> User:
     if existing_user:
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    user = User(email=user_in.email, full_name=user_in.full_name, hashed_password=get_password_hash(user_in.password))
+    user = User(
+        email=user_in.email,
+        full_name=user_in.full_name,
+        hashed_password=get_password_hash(user_in.password),
+        is_superuser=getattr(user_in, "is_superuser", False),
+    )
     db.add(user)
     db.commit()
     db.refresh(user)

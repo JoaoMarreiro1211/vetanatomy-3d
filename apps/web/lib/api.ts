@@ -94,6 +94,8 @@ export const api = {
     }
     return res.json()
   },
+  users: () => request('/users/'),
+  createUser: (payload: any) => request('/users/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
 }
 
 export default request
