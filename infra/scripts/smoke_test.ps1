@@ -16,6 +16,6 @@ Write-Host "Checking Web health..."
 Invoke-RestMethod "$WebUrl/api/health" | ConvertTo-Json -Compress
 
 Write-Host "Checking OpenAPI schema..."
-Invoke-WebRequest "$ApiUrl/api/v1/openapi.json" | Out-Null
+Invoke-RestMethod "$ApiUrl/api/v1/openapi.json" | Out-Null
 
 Write-Host "Smoke test passed."
