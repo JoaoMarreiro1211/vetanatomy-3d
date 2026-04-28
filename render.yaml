@@ -2,20 +2,16 @@ databases:
   - name: vetanatomy-db
     databaseName: vetanatomy
     user: vetanatomy
-    plan: basic-256mb
+    plan: free
 
 services:
   - type: web
     name: vetanatomy-api
     runtime: docker
-    plan: starter
+    plan: free
     dockerContext: ./apps/api
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    disk:
-      name: vetanatomy-api-storage
-      mountPath: /app/storage
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -33,14 +29,3 @@ services:
         value: "480"
       - key: LOCAL_STORAGE_PATH
         value: /app/storage
-
-  - type: web
-    name: vetanatomy-web
-    runtime: docker
-    plan: starter
-    dockerContext: ./apps/web
-    dockerfilePath: ./Dockerfile
-    healthCheckPath: /api/health
-    envVars:
-      - key: NEXT_PUBLIC_API_BASE
-        sync: false
