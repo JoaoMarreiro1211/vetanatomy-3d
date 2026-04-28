@@ -17,18 +17,21 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "VetAnatomy 3D"
 
     # Accepts a JSON list, comma-separated values, or a single origin.
-    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,https://vetanatomy-3d.vercel.app"
 
     @property
     def cors_origins(self) -> list[str]:
+        required_origins = {"https://vetanatomy-3d.vercel.app"}
         raw = self.BACKEND_CORS_ORIGINS.strip().replace('\\"', '"')
         if raw.startswith("["):
             try:
                 parsed = json.loads(raw)
-                return [str(origin).rstrip("/") for origin in parsed if str(origin).strip()]
+                origins = [str(origin).rstrip("/") for origin in parsed if str(origin).strip()]
+                return sorted(set(origins) | required_origins)
             except json.JSONDecodeError:
                 pass
-        return [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+        origins = [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+        return sorted(set(origins) | required_origins)
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
