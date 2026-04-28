@@ -698,7 +698,7 @@ function HudButton({ active, children, onClick }: { active?: boolean; children: 
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold shadow transition ${
+      className={`pointer-events-auto rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold shadow transition ${
         active ? "bg-[#DFF3E3] text-[#1F2A22]" : "bg-white/95 text-[#1F2A22] hover:bg-[#F4FBF6]"
       }`}
     >
@@ -780,7 +780,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <StructurePanel structure={selectedStructure} />
       </div>
 
-      <div className="absolute right-4 top-4 z-10 flex max-w-[64%] flex-wrap justify-end gap-2">
+      <div className="pointer-events-none absolute right-4 top-4 z-10 flex max-w-[64%] flex-wrap justify-end gap-2">
         <HudButton active={autoRotate} onClick={() => setAutoRotate((value) => !value)}>{autoRotate ? "Giro on" : "Giro off"}</HudButton>
         <HudButton active={showLabels} onClick={() => setShowLabels((value) => !value)}>Rotulos</HudButton>
         <HudButton active={xray} onClick={() => setXray((value) => !value)}>Raio-X</HudButton>
@@ -789,7 +789,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <HudButton active={clipEnabled} onClick={() => setClipEnabled((value) => !value)}>Corte 3D</HudButton>
       </div>
 
-      <div className="absolute left-4 top-[6.8rem] z-10 flex flex-wrap gap-2">
+      <div className="pointer-events-none absolute left-4 top-[6.8rem] z-10 flex flex-wrap gap-2">
         {(["combined", "surface", "muscles", "skeleton", "organs", "vascular"] as AnatomyLayer[]).map((item) => (
           <HudButton key={item} active={layer === item} onClick={() => setLayer(item)}>
             {item === "combined" ? "Completo" : item === "surface" ? "Pele" : item === "muscles" ? "Musculos" : item === "skeleton" ? "Osseo" : item === "organs" ? "Orgaos" : "Vasos"}
@@ -797,7 +797,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         ))}
       </div>
 
-      <div className="absolute left-4 top-[10.1rem] z-10 flex flex-wrap gap-2">
+      <div className="pointer-events-none absolute left-4 top-[10.1rem] z-10 flex flex-wrap gap-2">
         {(["lateral", "dorsal", "ventral", "cranial"] as ViewPreset[]).map((item) => (
           <HudButton
             key={item}
@@ -812,21 +812,21 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         ))}
       </div>
 
-      <div className="absolute left-4 top-[13.4rem] z-10 flex flex-wrap gap-2">
+      <div className="pointer-events-none absolute left-4 top-[13.4rem] z-10 flex flex-wrap gap-2">
         <HudButton active={toolMode === "annotate"} onClick={() => { setToolMode("annotate"); setMeasureDraft([]); }}>Anotar</HudButton>
         <HudButton active={toolMode === "distance"} onClick={() => { setToolMode("distance"); setMeasureDraft([]); }}>Medir distancia</HudButton>
         <HudButton active={toolMode === "angle"} onClick={() => { setToolMode("angle"); setMeasureDraft([]); }}>Medir angulo</HudButton>
         <HudButton active={measurements.length > 0} onClick={() => { setMeasurements([]); setMeasureDraft([]); }}>Limpar medidas</HudButton>
       </div>
 
-      <div className="absolute left-4 top-[16.7rem] z-10 flex flex-wrap gap-2">
+      <div className="pointer-events-none absolute left-4 top-[16.7rem] z-10 flex flex-wrap gap-2">
         <HudButton active={clipEnabled && focusRegion === "thorax"} onClick={() => setClipPreset("x", -0.28, "thorax", "combined", true)}>Corte toracico</HudButton>
         <HudButton active={clipEnabled && focusRegion === "abdomen"} onClick={() => setClipPreset("x", 0.58, "abdomen", "organs", true)}>Corte abdominal</HudButton>
         <HudButton active={clipEnabled && focusRegion === "head"} onClick={() => setClipPreset("oblique", -0.12, "head", "skeleton", false)}>Corte craniano</HudButton>
         <HudButton active={clipSlab} onClick={() => setClipSlab((value) => !value)}>Slab</HudButton>
       </div>
 
-      <div className="absolute bottom-4 right-4 z-10 flex max-w-[58%] flex-wrap justify-end gap-2">
+      <div className="pointer-events-none absolute bottom-4 right-4 z-10 flex max-w-[58%] flex-wrap justify-end gap-2">
         {quickRegions.map((region) => (
           <HudButton
             key={region.key}
