@@ -577,7 +577,7 @@ function RegionLabel({ label, position }: { label: string; position: [number, nu
   );
 }
 
-function AnnotationMarker({ annotation }: { annotation: Annotation }) {
+function AnnotationMarker({ annotation, showLabel }: { annotation: Annotation; showLabel: boolean }) {
   const point = annotation.geometry?.coordinates || { x: 0, y: 0, z: 0 };
   const color = severityColor[annotation.severity || ""] || "#8BB8A8";
 
@@ -591,11 +591,13 @@ function AnnotationMarker({ annotation }: { annotation: Annotation }) {
         <torusGeometry args={[0.13, 0.008, 8, 32]} />
         <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.18} transparent opacity={0.65} />
       </mesh>
-      <Html center distanceFactor={8}>
-        <div className="min-w-20 rounded-md border border-border bg-white px-2 py-1 text-xs font-medium text-foreground shadow-sm">
-          {annotation.annotation_type}
-        </div>
-      </Html>
+      {showLabel ? (
+        <Html center distanceFactor={8}>
+          <div className="min-w-20 rounded-md border border-border bg-white px-2 py-1 text-xs font-medium text-foreground shadow-sm">
+            {annotation.annotation_type}
+          </div>
+        </Html>
+      ) : null}
     </group>
   );
 }
@@ -901,7 +903,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
           </>
         ) : null}
         {visibleAnnotations.map((annotation) => (
-          <AnnotationMarker key={annotation.id} annotation={annotation} />
+          <AnnotationMarker key={annotation.id} annotation={annotation} showLabel={showLabels} />
         ))}
         {selectedPoint ? <SelectedPointMarker point={selectedPoint} /> : null}
         <MeasurementOverlay measurements={measurements} draft={measureDraft} />
