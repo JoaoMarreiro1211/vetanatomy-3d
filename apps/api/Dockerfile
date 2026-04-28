@@ -12,9 +12,15 @@ RUN apt-get update \
 
 COPY pyproject.toml /app/
 
+ARG INSTALL_DEV=false
+
 RUN pip install --no-cache-dir poetry \
     && poetry config virtualenvs.create false \
-    && poetry install --no-root --only main --no-interaction --no-ansi
+    && if [ "$INSTALL_DEV" = "true" ]; then \
+        poetry install --no-root --with dev --no-interaction --no-ansi; \
+    else \
+        poetry install --no-root --only main --no-interaction --no-ansi; \
+    fi
 
 COPY . /app
 

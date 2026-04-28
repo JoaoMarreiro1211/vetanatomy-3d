@@ -1,9 +1,13 @@
 #!/usr/bin/env sh
 # Build image and run tests inside container (requires docker)
 set -e
-ROOT_DIR=$(dirname $(dirname "$0"))/..
+ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)"
+cd "$ROOT_DIR"
+
 echo "Building Docker image for tests..."
-docker build -t vetanatomy-api-test ./apps/api
+docker build --build-arg INSTALL_DEV=true -t vetanatomy-api-test ./apps/api
+
 echo "Running tests inside container..."
-docker run --rm vetanatomy-api-test sh -c "poetry run pytest -q"
+docker run --rm vetanatomy-api-test sh -c "python -m pytest -q"
+
 echo "Tests finished."
