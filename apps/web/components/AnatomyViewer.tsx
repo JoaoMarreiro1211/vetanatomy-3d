@@ -707,9 +707,18 @@ function HudButton({ active, children, onClick }: { active?: boolean; children: 
   );
 }
 
+function ControlSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-4 border-t border-white/10 pt-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-white/45">{title}</div>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
 export default function AnatomyViewer({ annotations = [], onPick, selectedPoint, template, patientLabel }: AnatomyViewerProps) {
   const [autoRotate, setAutoRotate] = useState(true);
-  const [showLabels, setShowLabels] = useState(true);
+  const [showLabels, setShowLabels] = useState(false);
   const [layer, setLayer] = useState<AnatomyLayer>("combined");
   const [view, setView] = useState<ViewPreset>("lateral");
   const [focusRegion, setFocusRegion] = useState("");
@@ -767,94 +776,67 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
   }
 
   return (
-    <div className="relative h-[34rem] w-full overflow-hidden rounded-md border border-[#20372B] bg-[#07130E] shadow-sm">
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_42%,rgba(112,178,132,0.16),transparent_44%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]" />
-      <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-sm rounded-md border border-white/10 bg-[#07130E]/85 px-3 py-2 text-xs text-white shadow">
+    <div className="grid w-full gap-3 rounded-md border border-[#20372B] bg-[#07130E] p-3 shadow-sm 2xl:grid-cols-[17rem_minmax(34rem,1fr)_20rem]">
+      <aside className="rounded-md border border-white/10 bg-white/[0.04] p-3 text-xs text-white">
         <div className="font-semibold">{template?.name || "VetAnatomy Digital Twin Engine"}</div>
-        <div className="mt-0.5 text-white/75">{patientLabel || "Clique no modelo para selecionar um ponto anatomico"}</div>
-        <div className="mt-1 text-white/80">Camada: {layer} | Vista: {view} | Foco: {activeRegionLabel}</div>
-        <div className="mt-1 text-white/60">Qualidade: {qualityPreset.label} | Ferramenta: {toolMode} | Marcacoes: {visibleAnnotations.length}</div>
-      </div>
+        <div className="mt-1 text-white/65">{patientLabel || "Selecione uma estrutura no modelo."}</div>
 
-      <div className="pointer-events-none absolute right-4 top-[4.9rem] z-10 w-[min(21rem,calc(100%-2rem))] rounded-md border border-white/10 bg-[#07130E]/88 p-3 text-xs text-white shadow">
-        <StructurePanel structure={selectedStructure} />
-      </div>
+        <ControlSection title="Visual">
+          <HudButton active={autoRotate} onClick={() => setAutoRotate((value) => !value)}>{autoRotate ? "Giro on" : "Giro off"}</HudButton>
+          <HudButton active={showLabels} onClick={() => setShowLabels((value) => !value)}>Rotulos</HudButton>
+          <HudButton active={xray} onClick={() => setXray((value) => !value)}>Raio-X</HudButton>
+          <HudButton active={exploded} onClick={() => setExploded((value) => !value)}>Explodido</HudButton>
+          <HudButton active={physiology} onClick={() => setPhysiology((value) => !value)}>Fisiologia</HudButton>
+        </ControlSection>
 
-      <div className="pointer-events-none absolute right-4 top-4 z-10 flex max-w-[64%] flex-wrap justify-end gap-2">
-        <HudButton active={autoRotate} onClick={() => setAutoRotate((value) => !value)}>{autoRotate ? "Giro on" : "Giro off"}</HudButton>
-        <HudButton active={showLabels} onClick={() => setShowLabels((value) => !value)}>Rotulos</HudButton>
-        <HudButton active={xray} onClick={() => setXray((value) => !value)}>Raio-X</HudButton>
-        <HudButton active={exploded} onClick={() => setExploded((value) => !value)}>Explodido</HudButton>
-        <HudButton active={physiology} onClick={() => setPhysiology((value) => !value)}>Fisiologia</HudButton>
-        <HudButton active={clipEnabled} onClick={() => setClipEnabled((value) => !value)}>Corte 3D</HudButton>
-      </div>
-
-      <div className="pointer-events-none absolute left-4 top-[6.8rem] z-10 flex flex-wrap gap-2">
-        {(["combined", "surface", "muscles", "skeleton", "organs", "vascular"] as AnatomyLayer[]).map((item) => (
-          <HudButton key={item} active={layer === item} onClick={() => setLayer(item)}>
-            {item === "combined" ? "Completo" : item === "surface" ? "Pele" : item === "muscles" ? "Musculos" : item === "skeleton" ? "Osseo" : item === "organs" ? "Orgaos" : "Vasos"}
-          </HudButton>
-        ))}
-      </div>
-
-      <div className="pointer-events-none absolute left-4 top-[10.1rem] z-10 flex flex-wrap gap-2">
-        {(["lateral", "dorsal", "ventral", "cranial"] as ViewPreset[]).map((item) => (
-          <HudButton
-            key={item}
-            active={view === item}
-            onClick={() => {
-              setAutoRotate(false);
-              setView(item);
-            }}
-          >
-            {item === "lateral" ? "Lateral" : item === "dorsal" ? "Dorsal" : item === "ventral" ? "Ventral" : "Cranial"}
-          </HudButton>
-        ))}
-      </div>
-
-      <div className="pointer-events-none absolute left-4 top-[13.4rem] z-10 flex flex-wrap gap-2">
-        <HudButton active={toolMode === "annotate"} onClick={() => { setToolMode("annotate"); setMeasureDraft([]); }}>Anotar</HudButton>
-        <HudButton active={toolMode === "distance"} onClick={() => { setToolMode("distance"); setMeasureDraft([]); }}>Medir distancia</HudButton>
-        <HudButton active={toolMode === "angle"} onClick={() => { setToolMode("angle"); setMeasureDraft([]); }}>Medir angulo</HudButton>
-        <HudButton active={measurements.length > 0} onClick={() => { setMeasurements([]); setMeasureDraft([]); }}>Limpar medidas</HudButton>
-      </div>
-
-      <div className="pointer-events-none absolute left-4 top-[16.7rem] z-10 flex flex-wrap gap-2">
-        <HudButton active={clipEnabled && focusRegion === "thorax"} onClick={() => setClipPreset("x", -0.28, "thorax", "combined", true)}>Corte toracico</HudButton>
-        <HudButton active={clipEnabled && focusRegion === "abdomen"} onClick={() => setClipPreset("x", 0.58, "abdomen", "organs", true)}>Corte abdominal</HudButton>
-        <HudButton active={clipEnabled && focusRegion === "head"} onClick={() => setClipPreset("oblique", -0.12, "head", "skeleton", false)}>Corte craniano</HudButton>
-        <HudButton active={clipSlab} onClick={() => setClipSlab((value) => !value)}>Slab</HudButton>
-      </div>
-
-      <div className="pointer-events-none absolute bottom-4 right-4 z-10 flex max-w-[58%] flex-wrap justify-end gap-2">
-        {quickRegions.map((region) => (
-          <HudButton
-            key={region.key}
-            active={focusRegion === region.key}
-            onClick={() => {
-              setFocusRegion(region.key);
-              onPick(region.point);
-            }}
-          >
-            {region.label}
-          </HudButton>
-        ))}
-        <HudButton active={!focusRegion} onClick={() => setFocusRegion("")}>Corpo inteiro</HudButton>
-      </div>
-
-      <div className="absolute bottom-4 left-4 z-10 w-[min(24rem,calc(100%-2rem))] rounded-md border border-white/10 bg-[#07130E]/85 p-3 text-xs text-white shadow">
-        <div className="flex flex-wrap gap-2">
-          {(["eco", "clinical", "ultra"] as QualityPreset[]).map((item) => (
-            <HudButton key={item} active={quality === item} onClick={() => setQuality(item)}>{qualityConfig[item].label}</HudButton>
+        <ControlSection title="Camadas">
+          {(["combined", "surface", "muscles", "skeleton", "organs", "vascular"] as AnatomyLayer[]).map((item) => (
+            <HudButton key={item} active={layer === item} onClick={() => setLayer(item)}>
+              {item === "combined" ? "Completo" : item === "surface" ? "Pele" : item === "muscles" ? "Musculos" : item === "skeleton" ? "Osseo" : item === "organs" ? "Orgaos" : "Vasos"}
+            </HudButton>
           ))}
+        </ControlSection>
+
+        <ControlSection title="Vista">
+          {(["lateral", "dorsal", "ventral", "cranial"] as ViewPreset[]).map((item) => (
+            <HudButton
+              key={item}
+              active={view === item}
+              onClick={() => {
+                setAutoRotate(false);
+                setView(item);
+              }}
+            >
+              {item === "lateral" ? "Lateral" : item === "dorsal" ? "Dorsal" : item === "ventral" ? "Ventral" : "Cranial"}
+            </HudButton>
+          ))}
+        </ControlSection>
+
+        <ControlSection title="Ferramentas">
+          <HudButton active={toolMode === "annotate"} onClick={() => { setToolMode("annotate"); setMeasureDraft([]); }}>Anotar</HudButton>
+          <HudButton active={toolMode === "distance"} onClick={() => { setToolMode("distance"); setMeasureDraft([]); }}>Distancia</HudButton>
+          <HudButton active={toolMode === "angle"} onClick={() => { setToolMode("angle"); setMeasureDraft([]); }}>Angulo</HudButton>
+          <HudButton active={measurements.length > 0} onClick={() => { setMeasurements([]); setMeasureDraft([]); }}>Limpar</HudButton>
+        </ControlSection>
+
+        <ControlSection title="Cortes">
+          <HudButton active={clipEnabled} onClick={() => setClipEnabled((value) => !value)}>Ativar corte</HudButton>
+          <HudButton active={clipEnabled && focusRegion === "thorax"} onClick={() => setClipPreset("x", -0.28, "thorax", "combined", true)}>Toracico</HudButton>
+          <HudButton active={clipEnabled && focusRegion === "abdomen"} onClick={() => setClipPreset("x", 0.58, "abdomen", "organs", true)}>Abdominal</HudButton>
+          <HudButton active={clipEnabled && focusRegion === "head"} onClick={() => setClipPreset("oblique", -0.12, "head", "skeleton", false)}>Craniano</HudButton>
+          <HudButton active={clipSlab} onClick={() => setClipSlab((value) => !value)}>Slab</HudButton>
+        </ControlSection>
+
+        <ControlSection title="Plano">
           {(["x", "y", "z"] as ClipAxis[]).map((axis) => (
             <HudButton key={axis} active={clipAxis === axis && clipEnabled} onClick={() => { setClipAxis(axis); setClipEnabled(true); }}>Eixo {axis.toUpperCase()}</HudButton>
           ))}
           <HudButton active={clipAxis === "oblique" && clipEnabled} onClick={() => { setClipAxis("oblique"); setClipEnabled(true); }}>Obliquo</HudButton>
-        </div>
+        </ControlSection>
+
         {clipEnabled ? (
           <label className="mt-3 block">
-            <span className="mb-1 block text-white/70">Plano de corte</span>
+            <span className="mb-1 block text-white/70">Profundidade do corte</span>
             <input
               type="range"
               min="-1.4"
@@ -864,25 +846,30 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
               onChange={(event) => setClipValue(Number(event.target.value))}
               className="w-full accent-[#8BB8A8]"
             />
-            <div className="mt-2 text-white/60">
-              {clipSlab ? "Slab ativo: duas faces de corte para isolar uma faixa anatomica." : "Corte simples: use presets ou ajuste o plano manualmente."}
-            </div>
+            <div className="mt-1 text-white/45">{clipSlab ? "Slab isolando uma faixa anatomica." : "Corte simples por plano."}</div>
           </label>
-        ) : (
-          <div className="mt-3 flex flex-wrap gap-2 text-white/75">
-            <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#6FBF73]" /> Leve</span>
-            <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#D7B267]" /> Moderada</span>
-            <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#D97C7C]" /> Grave</span>
-          </div>
-        )}
-      </div>
+        ) : null}
 
-      <Canvas
-        camera={{ position: [0, 1.25, 5.4], fov: 42 }}
-        dpr={qualityPreset.dpr}
-        shadows={qualityPreset.shadows}
-        gl={{ preserveDrawingBuffer: true }}
-      >
+        <ControlSection title="Qualidade">
+          {(["eco", "clinical", "ultra"] as QualityPreset[]).map((item) => (
+            <HudButton key={item} active={quality === item} onClick={() => setQuality(item)}>{qualityConfig[item].label}</HudButton>
+          ))}
+        </ControlSection>
+      </aside>
+
+      <section className="relative h-[28rem] min-w-0 overflow-hidden rounded-md border border-[#20372B] bg-[#07130E] md:h-[34rem]">
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_42%,rgba(112,178,132,0.16),transparent_44%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent)]" />
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-md border border-white/10 bg-[#07130E]/80 px-3 py-2 text-xs text-white shadow">
+          <div className="font-semibold">{selectedStructure?.name || activeRegionLabel}</div>
+          <div className="mt-0.5 text-white/60">{layer} | {view} | {toolMode} | {qualityPreset.label}</div>
+        </div>
+
+        <Canvas
+          camera={{ position: [0, 1.25, 5.4], fov: 42 }}
+          dpr={qualityPreset.dpr}
+          shadows={qualityPreset.shadows}
+          gl={{ preserveDrawingBuffer: true }}
+        >
         <CameraPreset view={view} />
         <GlobalClipping enabled={clipEnabled} axis={clipAxis} value={clipValue} slab={clipSlab} slabWidth={0.92} />
         <color attach="background" args={["#07130E"]} />
@@ -920,6 +907,43 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <MeasurementOverlay measurements={measurements} draft={measureDraft} />
         <OrbitControls enableDamping enablePan={false} minDistance={2.35} maxDistance={9} />
       </Canvas>
+
+        <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex flex-wrap gap-2 text-xs text-white/75">
+          <span className="flex items-center gap-1 rounded-full bg-[#07130E]/80 px-2 py-1"><i className="h-2 w-2 rounded-full bg-[#6FBF73]" /> Leve</span>
+          <span className="flex items-center gap-1 rounded-full bg-[#07130E]/80 px-2 py-1"><i className="h-2 w-2 rounded-full bg-[#D7B267]" /> Moderada</span>
+          <span className="flex items-center gap-1 rounded-full bg-[#07130E]/80 px-2 py-1"><i className="h-2 w-2 rounded-full bg-[#D97C7C]" /> Grave</span>
+        </div>
+      </section>
+
+      <aside className="rounded-md border border-white/10 bg-white/[0.04] p-3 text-xs text-white">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold">Ficha anatomica</div>
+            <div className="mt-0.5 text-white/50">Estrutura selecionada</div>
+          </div>
+          <span className="rounded-full bg-white/10 px-2 py-1 text-[11px] text-white/75">{visibleAnnotations.length} marc.</span>
+        </div>
+        <StructurePanel structure={selectedStructure} />
+
+        <div className="mt-5 border-t border-white/10 pt-4">
+          <div className="font-semibold">Medidas</div>
+          <div className="mt-1 text-white/50">{measureDraft.length ? `${measureDraft.length} ponto(s) selecionado(s)` : "Nenhuma medida em andamento"}</div>
+          <div className="mt-3 space-y-2">
+            {measurements.length ? (
+              measurements.slice(-4).map((measurement) => (
+                <div key={measurement.id} className="rounded-md border border-white/10 bg-white/5 p-2">
+                  <div className="font-semibold">{measurement.mode === "angle" ? "Angulo" : "Distancia"}</div>
+                  <div className="mt-0.5 text-white/70">{measurement.value}</div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-md border border-white/10 bg-white/5 p-2 text-white/55">
+                Use Distancia ou Angulo e clique nos pontos do modelo.
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
