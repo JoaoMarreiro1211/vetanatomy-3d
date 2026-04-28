@@ -56,7 +56,11 @@
   - Moderada
   - Grave
 - Rotacao automatica com controle de pausa.
-- Alternancia entre superficie e camada ossea.
+- Vistas clinicas padronizadas: lateral, dorsal, ventral e cranial.
+- Alternancia entre camadas: completo, superficie, osseo e orgaos.
+- Foco por regiao anatomica para reduzir ruido visual.
+- Orgaos internos esquematicos para comunicacao clinica.
+- Camada ossea esquematica com coluna, costelas, cranio e membros.
 - Rótulos anatomicos com opcao de mostrar/ocultar.
 - Orbit controls para rotacionar e aproximar.
 

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
-import { Canvas, ThreeEvent, useFrame } from "@react-three/fiber";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import { Group, Vector3 } from "three";
 
@@ -45,6 +45,16 @@ const defaultRegions = {
   limbs: "Membros",
 };
 
+type AnatomyLayer = "surface" | "skeleton" | "organs" | "combined";
+type ViewPreset = "lateral" | "dorsal" | "ventral" | "cranial";
+
+const viewPositions: Record<ViewPreset, [number, number, number]> = {
+  lateral: [0, 1.25, 5.4],
+  dorsal: [0, 6.3, 0.1],
+  ventral: [0, -5.4, 1.6],
+  cranial: [5.7, 1.1, 0],
+};
+
 function roundedPoint(point: Vector3): AnatomyPoint {
   return {
     x: Number(point.x.toFixed(2)),
@@ -58,11 +68,13 @@ function ClinicalAnimalModel({
   onPick,
   autoRotate,
   layer,
+  focusRegion,
 }: {
   fallbackShape: string;
   onPick: (point: AnatomyPoint) => void;
   autoRotate: boolean;
-  layer: "surface" | "skeleton";
+  layer: AnatomyLayer;
+  focusRegion: string;
 }) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -88,6 +100,11 @@ function ClinicalAnimalModel({
       : isLarge
         ? [2.05, 0.88, 0.62]
         : [1.65, 0.72, 0.52];
+  const showSurface = layer === "surface" || layer === "combined";
+  const showSkeleton = layer === "skeleton" || layer === "combined";
+  const showOrgans = layer === "organs" || layer === "combined";
+  const surfaceOpacity = layer === "combined" ? 0.28 : layer === "surface" ? 1 : 0.16;
+  const focusOpacity = (region: string) => (!focusRegion || focusRegion === region ? 1 : 0.24);
 
   return (
     <group
@@ -99,15 +116,15 @@ function ClinicalAnimalModel({
     >
       <mesh position={[0, 0.05, 0]} scale={bodyScale}>
         <sphereGeometry args={[1, 56, 36]} />
-        <meshStandardMaterial color={hovered ? "#DFF3E3" : "#EAF4EC"} roughness={0.58} metalness={0.04} transparent={layer === "skeleton"} opacity={layer === "skeleton" ? 0.34 : 1} />
+        <meshStandardMaterial color={hovered ? "#DFF3E3" : "#EAF4EC"} roughness={0.58} metalness={0.04} transparent opacity={showSurface ? surfaceOpacity * focusOpacity("thorax") : 0.12} />
       </mesh>
 
       <mesh position={[isAvian ? 0.92 : 1.65, isAvian ? 0.23 : 0.18, 0]} scale={isAvian ? [0.38, 0.32, 0.32] : [0.58, 0.42, 0.4]}>
         <sphereGeometry args={[1, 42, 28]} />
-        <meshStandardMaterial color="#E5F0E8" roughness={0.6} transparent={layer === "skeleton"} opacity={layer === "skeleton" ? 0.38 : 1} />
+        <meshStandardMaterial color="#E5F0E8" roughness={0.6} transparent opacity={showSurface ? surfaceOpacity * focusOpacity("head") : 0.12} />
       </mesh>
 
-      {layer === "skeleton" ? (
+      {showSkeleton ? (
         <>
           <mesh position={[0.1, 0.35, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.035, 0.035, isLarge ? 1.75 : 1.35]}>
             <cylinderGeometry args={[1, 1, 1, 16]} />
@@ -122,6 +139,51 @@ function ClinicalAnimalModel({
           <mesh position={[1.52, 0.18, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.04, 0.04, 0.52]}>
             <cylinderGeometry args={[1, 1, 1, 16]} />
             <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+          </mesh>
+          <mesh position={[1.92, 0.28, 0]} scale={[0.28, 0.22, 0.2]}>
+            <sphereGeometry args={[1, 28, 18]} />
+            <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+          </mesh>
+          {[-0.9, -0.25, 0.55, 1.1].map((x) => (
+            <React.Fragment key={`bone-${x}`}>
+              <mesh position={[x, isLarge ? -0.9 : -0.72, 0.28]} scale={[0.035, isLarge ? 0.62 : 0.5, 0.035]}>
+                <capsuleGeometry args={[1, 1.25, 8, 16]} />
+                <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+              </mesh>
+              <mesh position={[x, isLarge ? -0.9 : -0.72, -0.28]} scale={[0.035, isLarge ? 0.62 : 0.5, 0.035]}>
+                <capsuleGeometry args={[1, 1.25, 8, 16]} />
+                <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+              </mesh>
+            </React.Fragment>
+          ))}
+        </>
+      ) : null}
+
+      {showOrgans ? (
+        <>
+          <mesh position={[0.55, 0.22, 0.12]} scale={[0.18, 0.22, 0.16]}>
+            <sphereGeometry args={[1, 28, 20]} />
+            <meshStandardMaterial color="#D97C7C" roughness={0.56} transparent opacity={focusOpacity("thorax")} />
+          </mesh>
+          <mesh position={[0.2, 0.2, 0.22]} scale={[0.32, 0.23, 0.12]}>
+            <sphereGeometry args={[1, 28, 18]} />
+            <meshStandardMaterial color="#B9D7E8" roughness={0.62} transparent opacity={focusOpacity("thorax") * 0.88} />
+          </mesh>
+          <mesh position={[0.2, 0.2, -0.22]} scale={[0.32, 0.23, 0.12]}>
+            <sphereGeometry args={[1, 28, 18]} />
+            <meshStandardMaterial color="#B9D7E8" roughness={0.62} transparent opacity={focusOpacity("thorax") * 0.88} />
+          </mesh>
+          <mesh position={[-0.62, 0.02, 0.12]} scale={[0.34, 0.22, 0.18]}>
+            <sphereGeometry args={[1, 28, 18]} />
+            <meshStandardMaterial color="#D7B267" roughness={0.62} transparent opacity={focusOpacity("abdomen")} />
+          </mesh>
+          <mesh position={[-0.92, -0.12, -0.08]} rotation={[0, 0.1, 0.45]} scale={[0.42, 0.06, 0.18]}>
+            <torusGeometry args={[1, 0.18, 12, 42]} />
+            <meshStandardMaterial color="#D8AFA3" roughness={0.66} transparent opacity={focusOpacity("abdomen")} />
+          </mesh>
+          <mesh position={[-1.22, -0.2, 0]} scale={[0.18, 0.15, 0.13]}>
+            <sphereGeometry args={[1, 24, 16]} />
+            <meshStandardMaterial color="#C9D9F0" roughness={0.62} transparent opacity={focusOpacity("abdomen")} />
           </mesh>
         </>
       ) : null}
@@ -233,10 +295,25 @@ function SelectedPointMarker({ point }: { point: AnatomyPoint }) {
   );
 }
 
+function CameraPreset({ view }: { view: ViewPreset }) {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    const [x, y, z] = viewPositions[view];
+    camera.position.set(x, y, z);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+  }, [camera, view]);
+
+  return null;
+}
+
 export default function AnatomyViewer({ annotations = [], onPick, selectedPoint, template, patientLabel }: AnatomyViewerProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
-  const [layer, setLayer] = useState<"surface" | "skeleton">("surface");
+  const [layer, setLayer] = useState<AnatomyLayer>("combined");
+  const [view, setView] = useState<ViewPreset>("lateral");
+  const [focusRegion, setFocusRegion] = useState("");
   const visibleAnnotations = useMemo(() => annotations.filter((annotation) => annotation.geometry?.coordinates), [annotations]);
   const regions = template?.regions_map || defaultRegions;
   const fallbackShape = template?.fallback_shape || "quadruped";
@@ -246,12 +323,14 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
     { key: "abdomen", label: regions.abdomen || "Abdomen", point: { x: -0.78, y: 0.18, z: 0.25 } },
     { key: "limbs", label: regions.limbs || "Membros", point: { x: -0.25, y: -0.78, z: 0.28 } },
   ];
+  const activeRegionLabel = quickRegions.find((region) => region.key === focusRegion)?.label || "Corpo inteiro";
 
   return (
     <div className="relative h-[30rem] w-full overflow-hidden rounded-md border border-border bg-[#102018] shadow-sm">
       <div className="pointer-events-none absolute left-4 top-4 z-10 max-w-sm rounded-md border border-white/10 bg-[#102018]/85 px-3 py-2 text-xs text-white shadow">
         <div className="font-semibold">{template?.name || "Template anatomico padrao"}</div>
         <div className="mt-0.5 text-white/75">{patientLabel || "Clique no modelo para selecionar um ponto anatomico"}</div>
+        <div className="mt-1 text-white/80">Camada: {layer} | Vista: {view} | Foco: {activeRegionLabel}</div>
       </div>
       <div className="pointer-events-none absolute bottom-4 left-4 z-10 flex flex-wrap gap-2 rounded-md border border-white/10 bg-[#102018]/85 px-3 py-2 text-xs text-white shadow">
         <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#6FBF73]" /> Leve</span>
@@ -265,28 +344,61 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <button type="button" onClick={() => setShowLabels((value) => !value)} className="rounded-md border border-white/15 bg-white/95 px-3 py-1.5 font-semibold text-[#1F2A22] shadow">
           {showLabels ? "Ocultar regioes" : "Mostrar regioes"}
         </button>
-        <button type="button" onClick={() => setLayer((value) => (value === "surface" ? "skeleton" : "surface"))} className="rounded-md border border-white/15 bg-white/95 px-3 py-1.5 font-semibold text-[#1F2A22] shadow">
-          {layer === "surface" ? "Camada ossea" : "Superficie"}
-        </button>
+        {(["combined", "surface", "skeleton", "organs"] as AnatomyLayer[]).map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => setLayer(item)}
+            className={`rounded-md border border-white/15 px-3 py-1.5 font-semibold shadow ${layer === item ? "bg-[#DFF3E3] text-[#1F2A22]" : "bg-white/95 text-[#1F2A22]"}`}
+          >
+            {item === "combined" ? "Completo" : item === "surface" ? "Superficie" : item === "skeleton" ? "Osseo" : "Orgaos"}
+          </button>
+        ))}
+      </div>
+      <div className="absolute left-4 top-[5.8rem] z-10 flex flex-wrap gap-2 text-xs">
+        {(["lateral", "dorsal", "ventral", "cranial"] as ViewPreset[]).map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => {
+              setAutoRotate(false);
+              setView(item);
+            }}
+            className={`rounded-md border border-white/15 px-2.5 py-1.5 font-semibold shadow ${view === item ? "bg-[#DFF3E3] text-[#1F2A22]" : "bg-white/95 text-[#1F2A22]"}`}
+          >
+            {item === "lateral" ? "Lateral" : item === "dorsal" ? "Dorsal" : item === "ventral" ? "Ventral" : "Cranial"}
+          </button>
+        ))}
       </div>
       <div className="absolute bottom-4 right-4 z-10 flex max-w-[52%] flex-wrap justify-end gap-2">
         {quickRegions.map((region) => (
           <button
             key={region.key}
             type="button"
-            onClick={() => onPick(region.point)}
-            className="rounded-md border border-white/15 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-[#1F2A22] shadow"
+            onClick={() => {
+              setFocusRegion(region.key);
+              onPick(region.point);
+            }}
+            className={`rounded-md border border-white/15 px-2.5 py-1.5 text-xs font-semibold shadow ${focusRegion === region.key ? "bg-[#DFF3E3] text-[#1F2A22]" : "bg-white/95 text-[#1F2A22]"}`}
           >
             {region.label}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setFocusRegion("")}
+          className="rounded-md border border-white/15 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-[#1F2A22] shadow"
+        >
+          Corpo inteiro
+        </button>
       </div>
       <Canvas camera={{ position: [0, 1.25, 5.4], fov: 42 }}>
+        <CameraPreset view={view} />
         <color attach="background" args={["#102018"]} />
         <ambientLight intensity={0.9} />
         <directionalLight position={[4, 5, 3]} intensity={1.45} />
         <directionalLight position={[-3, 1, -2]} intensity={0.5} color="#DFF3E3" />
-        <ClinicalAnimalModel fallbackShape={fallbackShape} onPick={onPick} autoRotate={autoRotate} layer={layer} />
+        <ClinicalAnimalModel fallbackShape={fallbackShape} onPick={onPick} autoRotate={autoRotate} layer={layer} focusRegion={focusRegion} />
         {showLabels ? (
           <>
             <RegionLabel label={regions.head || "Cabeca"} position={[1.58, 0.88, 0]} />
