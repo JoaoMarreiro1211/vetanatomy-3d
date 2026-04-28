@@ -1,8 +1,9 @@
 # Deploy em Producao
 
-Este guia deixa o VetAnatomy 3D pronto para subir em producao com duas rotas suportadas:
+Este guia deixa o VetAnatomy 3D pronto para subir em producao com tres rotas suportadas:
 
-- Render Blueprint: mais simples para publicar rapido.
+- Render Blueprint: mais simples para publicar a API e o banco PostgreSQL no plano free.
+- Vercel: mais simples para publicar o frontend Next.js.
 - VPS com Docker Compose + Caddy: controle total com HTTPS automatico.
 
 ## Checklist Obrigatorio
@@ -42,40 +43,60 @@ Frontend:
 NEXT_PUBLIC_API_BASE=https://api.example.com/api/v1
 ```
 
-## Opcao 1: Render
+## Opcao 1: Render para API
 
-Arquivo pronto: `render.yaml` na raiz do repositorio. Ha uma copia de referencia em `infra/render/render.yaml`. Ele usa `runtime: docker`, `dockerContext`, `dockerfilePath` e banco PostgreSQL `basic-256mb`, conforme a especificacao atual de Blueprints do Render.
-O serviço da API tambem declara um disco persistente montado em `/app/storage` para anexos e DICOM.
+Arquivo pronto: `render.yaml` na raiz do repositorio. Ha uma copia de referencia em `infra/render/render.yaml`. Ele usa `runtime: docker`, `dockerContext`, `dockerfilePath` e banco PostgreSQL no plano `free`.
+
+Observacao importante: no plano free do Render, o armazenamento local do container nao deve ser tratado como persistente. Para anexos e DICOM em producao real, use uma opcao persistente como S3/Cloud Storage ou publique em uma infraestrutura com volume persistente.
 
 Passos:
 
-1. Suba o repositório para GitHub.
+1. Suba o repositorio para GitHub.
 2. No Render, crie um Blueprint. O Render deve detectar `render.yaml` na raiz automaticamente.
 3. Quando o Render pedir variaveis `sync: false`, preencha:
-   - API `BACKEND_CORS_ORIGINS`: `["https://SEU_WEB_ON_RENDER"]`
-   - Web `NEXT_PUBLIC_API_BASE`: `https://SEU_API_ON_RENDER/api/v1`
-4. Depois que API e Web tiverem URLs definitivas, confira se esses dois valores batem.
-5. Faça redeploy da Web se alterar `NEXT_PUBLIC_API_BASE`, porque variavel `NEXT_PUBLIC_*` entra no build do Next.
+   - API `BACKEND_CORS_ORIGINS`: `["https://SEU_WEB"]`
+4. Depois que a API tiver URL definitiva, use essa URL no frontend:
+   - `NEXT_PUBLIC_API_BASE=https://SEU_API_ON_RENDER/api/v1`
+5. Se alterar `NEXT_PUBLIC_API_BASE`, faca rebuild/redeploy da Web, porque variavel `NEXT_PUBLIC_*` entra no build do Next.
 
-Healthchecks:
+Healthcheck:
 
 - API: `https://SEU_API/health`
-- Web: `https://SEU_WEB/api/health`
 
 Smoke test:
 
 ```bash
 curl https://SEU_API/health
-curl https://SEU_WEB/api/health
 ```
 
-Ou use:
+## Opcao 2: Vercel para Web
+
+Arquivo pronto: `vercel.json` na raiz do repositorio. Ele publica o app `vetanatomy-web` em Next.js.
+
+Passos:
+
+1. Importe o repositorio no Vercel.
+2. Configure a variavel:
+   - `NEXT_PUBLIC_API_BASE=https://SEU_API_ON_RENDER/api/v1`
+3. Faca o deploy.
+
+Healthcheck:
+
+- Web: `https://SEU_WEB/api/health`
+
+Smoke test de API + Web:
 
 ```bash
 API_URL=https://SEU_API WEB_URL=https://SEU_WEB sh infra/scripts/smoke_test.sh
 ```
 
-## Opcao 2: VPS com Docker Compose + Caddy
+No Windows PowerShell:
+
+```powershell
+.\infra\scripts\smoke_test.ps1 -ApiUrl https://SEU_API -WebUrl https://SEU_WEB
+```
+
+## Opcao 3: VPS com Docker Compose + Caddy
 
 Requisitos no servidor:
 
@@ -183,11 +204,11 @@ git checkout <commit-anterior>
 docker compose --env-file .env.production -f infra/docker/docker-compose.prod.yml up -d --build
 ```
 
-Em Render, use a tela de deploys do serviço e selecione redeploy de uma versao anterior.
+Em Render, use a tela de deploys do servico e selecione redeploy de uma versao anterior.
 
 ## Problemas Comuns
 
 - Login funciona mas refresh falha: confira `REFRESH_TOKEN_COOKIE_SAMESITE=none`, `REFRESH_TOKEN_COOKIE_SECURE=True` e HTTPS.
-- Frontend chama API errada: ajuste `NEXT_PUBLIC_API_BASE` e faça rebuild da Web.
+- Frontend chama API errada: ajuste `NEXT_PUBLIC_API_BASE` e faca rebuild da Web.
 - CORS bloqueado: `BACKEND_CORS_ORIGINS` deve conter exatamente a origem do frontend, com `https://`.
 - API sobe antes do banco: no Compose de producao o Postgres tem healthcheck; confira logs do `db`.
