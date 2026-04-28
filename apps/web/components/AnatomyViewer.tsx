@@ -243,6 +243,14 @@ function formatAngle(a: AnatomyPoint, b: AnatomyPoint, c: AnatomyPoint) {
   return `${angle.toFixed(1)}°`;
 }
 
+function normalizeLabel(label?: string | null) {
+  return (label || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function GlobalClipping({ enabled, axis, value, slab, slabWidth }: { enabled: boolean; axis: ClipAxis; value: number; slab: boolean; slabWidth: number }) {
   const { gl } = useThree();
 
@@ -747,6 +755,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
     { key: "limbs", label: regions.limbs || "Membros", point: { x: -0.25, y: -0.78, z: 0.28 } },
   ];
   const activeRegionLabel = quickRegions.find((region) => region.key === focusRegion)?.label || "Corpo inteiro";
+  const regionLabelNames = useMemo(() => new Set(quickRegions.map((region) => normalizeLabel(region.label))), [quickRegions]);
 
   function setClipPreset(axis: ClipAxis, value: number, region: string, nextLayer: AnatomyLayer = "combined", slab = false) {
     setClipAxis(axis);
@@ -903,7 +912,11 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
           </>
         ) : null}
         {visibleAnnotations.map((annotation) => (
-          <AnnotationMarker key={annotation.id} annotation={annotation} showLabel={showLabels} />
+          <AnnotationMarker
+            key={annotation.id}
+            annotation={annotation}
+            showLabel={showLabels && !regionLabelNames.has(normalizeLabel(annotation.annotation_type))}
+          />
         ))}
         {selectedPoint ? <SelectedPointMarker point={selectedPoint} /> : null}
         <MeasurementOverlay measurements={measurements} draft={measureDraft} />
