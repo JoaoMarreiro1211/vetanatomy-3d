@@ -61,7 +61,7 @@
 
 ## Ambiente Anatomico 3D
 
-- Modelo anatomico interativo em 3D.
+- Motor anatomico interativo em 3D no navegador.
 - Clique direto no modelo para selecionar ponto anatomico.
 - Atalhos de regiao para cabeca, torax, abdomen e membros.
 - Marcador visual para novo ponto selecionado.
@@ -72,11 +72,16 @@
   - Grave
 - Rotacao automatica com controle de pausa.
 - Vistas clinicas padronizadas: lateral, dorsal, ventral e cranial.
-- Alternancia entre camadas: completo, superficie, osseo e orgaos.
+- Alternancia entre camadas: completo, pele, musculos, osseo, orgaos e vasos.
 - Foco por regiao anatomica para reduzir ruido visual.
 - Orgaos internos esquematicos para comunicacao clinica.
 - Camada ossea esquematica com coluna, costelas, cranio e membros.
 - Rotulos anatomicos com opcao de mostrar/ocultar.
+- Modo Raio-X com transparencia seletiva.
+- Exploded view para separar camadas anatomicas.
+- Corte 3D em tempo real por eixo X, Y ou Z.
+- Simulacao fisiologica visual com batimento cardiaco, respiracao e fluxo vascular.
+- Presets de qualidade Eco, Clinico e Ultra para rodar em computadores e celulares diferentes.
 - Orbit controls para rotacionar e aproximar.
 
 ## Anotacoes Clinicas
