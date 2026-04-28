@@ -1,5 +1,7 @@
 # VetAnatomy 3D
 
+Veterinary diagnosis and hospital management platform with 3D anatomy, DICOM viewer, and multispecies digital clinical records.
+
 Plataforma web para gestao hospitalar veterinaria com prontuario digital, anotacoes anatomicas em 3D, base para imagem DICOM, planejamento cirurgico e dashboard operacional.
 
 ## Stack
@@ -16,7 +18,7 @@ Plataforma web para gestao hospitalar veterinaria com prontuario digital, anotac
 ### Opcao 1: Docker
 
 ```bash
-cd "c:\temp\projects\projeto computação grafica\vetanatomy-3d"
+cd "c:\temp\projects\projeto computacao grafica\vetanatomy-3d"
 docker compose -f infra/docker/docker-compose.yml up --build
 ```
 
@@ -59,7 +61,7 @@ O guia completo de deploy esta em `docs/DEPLOYMENT.md`.
 
 Opcoes prontas:
 
-- Render Blueprint: `infra/render/render.yaml`
+- Render Blueprint: `render.yaml`
 - VPS com Docker Compose + Caddy: `infra/docker/docker-compose.prod.yml`
 
 Smoke test depois do deploy:
