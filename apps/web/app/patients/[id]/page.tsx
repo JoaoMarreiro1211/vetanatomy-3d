@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowLeft, ClipboardList, FileImage, Printer, Stethoscope } from "lucide-react";
+import { Activity, ArrowLeft, Bell, CheckCircle2, ClipboardList, FileImage, Printer, Stethoscope } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -23,6 +23,13 @@ import { api } from "../../../lib/api";
 
 type Point = { x: number; y: number; z: number };
 type Tab = "anatomy" | "imaging" | "plan";
+type CareProtocol = {
+  title: string;
+  type: "follow_up" | "vaccine" | "imaging" | "medication" | "lab" | "procedure";
+  days: number;
+  priority: "normal" | "high";
+  note: string;
+};
 
 const annotationSchema = z.object({
   type: z.string().trim().min(2, "Informe o tipo de achado."),
@@ -61,6 +68,50 @@ const tabs: Array<{ id: Tab; label: string }> = [
   { id: "imaging", label: "Exames" },
   { id: "plan", label: "Plano cirurgico" },
 ];
+
+const defaultCareProtocols: CareProtocol[] = [
+  { title: "Retorno clinico", type: "follow_up", days: 7, priority: "normal", note: "Reavaliacao padrao criada pelo protocolo do prontuario." },
+  { title: "Revisao de exame", type: "imaging", days: 3, priority: "high", note: "Conferir resultado, laudo e conduta associada." },
+  { title: "Conferir medicacao", type: "medication", days: 1, priority: "normal", note: "Checar adesao, efeitos adversos e resposta clinica." },
+];
+
+const careProtocolsByGroup: Record<string, CareProtocol[]> = {
+  small_animals: [
+    { title: "Vacina ou reforco", type: "vaccine", days: 30, priority: "normal", note: "Revisar carteira vacinal e protocolo preventivo." },
+    { title: "Controle de peso", type: "follow_up", days: 14, priority: "normal", note: "Acompanhar escore corporal, dieta e peso." },
+    ...defaultCareProtocols,
+  ],
+  equine: [
+    { title: "Reavaliacao locomotora", type: "follow_up", days: 7, priority: "high", note: "Reavaliar claudicacao, dor, edema e resposta ao repouso." },
+    { title: "Imagem de tendao/articulacao", type: "imaging", days: 3, priority: "high", note: "Programar ultrassom ou radiografia de controle." },
+    ...defaultCareProtocols,
+  ],
+  bovine: [
+    { title: "Controle reprodutivo", type: "follow_up", days: 10, priority: "normal", note: "Revisar involucao uterina, producao e temperatura." },
+    { title: "Manejo de lote", type: "procedure", days: 14, priority: "normal", note: "Registrar orientacao de manejo, dieta e sanidade." },
+    ...defaultCareProtocols,
+  ],
+  small_ruminants: [
+    { title: "Revisao digestiva", type: "follow_up", days: 5, priority: "normal", note: "Checar apetite, fezes, motilidade ruminal e hidratacao." },
+    { title: "Manejo parasitario", type: "procedure", days: 21, priority: "normal", note: "Conferir escore, mucosas, fezes e calendario sanitario." },
+    ...defaultCareProtocols,
+  ],
+  avian: [
+    { title: "Reavaliacao respiratoria", type: "follow_up", days: 2, priority: "high", note: "Checar respiracao, apetite, peso e resposta ao manejo." },
+    { title: "Controle de peso diario", type: "follow_up", days: 1, priority: "high", note: "Aves instaveis precisam de acompanhamento de peso proximo." },
+    ...defaultCareProtocols,
+  ],
+  exotics: [
+    { title: "Revisao de manejo ambiental", type: "follow_up", days: 7, priority: "normal", note: "Checar temperatura, umidade, dieta, substrato e enriquecimento." },
+    { title: "Controle odontologico/nutricional", type: "procedure", days: 30, priority: "normal", note: "Aplicar quando especie e sinais clinicos indicarem." },
+    ...defaultCareProtocols,
+  ],
+};
+
+function protocolsForPatient(patient: any): CareProtocol[] {
+  if (!patient?.species_group) return defaultCareProtocols;
+  return careProtocolsByGroup[patient.species_group] || defaultCareProtocols;
+}
 
 export default function PatientPage({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -103,6 +154,10 @@ export default function PatientPage({ params }: { params: { id: string } }) {
     queryKey: ["surgical-plans", id],
     queryFn: () => api.surgicalPlansByPatient(id),
   });
+  const { data: reminders = [], isLoading: remindersLoading } = useQuery<any[]>({
+    queryKey: ["reminders", id],
+    queryFn: () => api.remindersByPatient(id),
+  });
   const { data: templates = [], isLoading: templatesLoading } = useQuery<any[]>({
     queryKey: ["anatomical-templates", patient?.species_id, patient?.species_group],
     queryFn: () => api.anatomicalTemplates({ speciesId: patient?.species_id || undefined, group: patient?.species_group || undefined }),
@@ -114,6 +169,7 @@ export default function PatientPage({ params }: { params: { id: string } }) {
     [annotations],
   );
   const activeTemplate = templates[0] || null;
+  const careProtocols = useMemo(() => protocolsForPatient(patient), [patient?.species_group]);
 
   const createAnnotation = useMutation({
     mutationFn: (formData: AnnotationForm) =>
@@ -190,6 +246,49 @@ export default function PatientPage({ params }: { params: { id: string } }) {
     },
   });
 
+  const createReminder = useMutation({
+    mutationFn: (payload: any) => api.createReminder(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", id] }),
+  });
+
+  const completeReminder = useMutation({
+    mutationFn: (reminderId: number) => api.updateReminder(reminderId, { is_done: true }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["reminders", id] }),
+  });
+
+  function addQuickReminder(kind: "follow_up" | "vaccine" | "imaging" | "medication") {
+    const days = kind === "follow_up" ? 7 : kind === "vaccine" ? 30 : kind === "imaging" ? 3 : 1;
+    const due = new Date();
+    due.setDate(due.getDate() + days);
+    const titles = {
+      follow_up: "Retorno clinico",
+      vaccine: "Vacina ou reforco",
+      imaging: "Revisao de exame",
+      medication: "Conferir medicacao",
+    };
+    createReminder.mutate({
+      patient_id: Number(id),
+      title: titles[kind],
+      reminder_type: kind,
+      due_date: due.toISOString().slice(0, 10),
+      priority: kind === "imaging" ? "high" : "normal",
+      notes: "Criado por acao rapida no prontuario.",
+    });
+  }
+
+  function addProtocolReminder(protocol: CareProtocol) {
+    const due = new Date();
+    due.setDate(due.getDate() + protocol.days);
+    createReminder.mutate({
+      patient_id: Number(id),
+      title: protocol.title,
+      reminder_type: protocol.type,
+      due_date: due.toISOString().slice(0, 10),
+      priority: protocol.priority,
+      notes: protocol.note,
+    });
+  }
+
   if (patientError) {
     return (
       <div className="clinical-container">
@@ -226,11 +325,12 @@ export default function PatientPage({ params }: { params: { id: string } }) {
         }
       />
 
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-5">
         <StatCard label="Anotacoes" value={annotationsLoading ? "..." : annotations.length} icon={<ClipboardList className="h-5 w-5" />} helper="Achados no modelo 3D" />
         <StatCard label="Graves" value={severeCount} icon={<Activity className="h-5 w-5" />} helper="Prioridade clinica" />
         <StatCard label="Exames" value={studiesLoading ? "..." : studies.length} icon={<FileImage className="h-5 w-5" />} helper="Imagem e DICOM" />
         <StatCard label="Planos" value={plansLoading ? "..." : surgicalPlans.length} icon={<Stethoscope className="h-5 w-5" />} helper="Planejamento cirurgico" />
+        <StatCard label="Pendencias" value={remindersLoading ? "..." : reminders.filter((item: any) => !item.is_done).length} icon={<Bell className="h-5 w-5" />} helper="Retornos e tarefas" />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
@@ -406,6 +506,64 @@ export default function PatientPage({ params }: { params: { id: string } }) {
                   {createAnnotation.isPending ? "Salvando..." : "Salvar anotacao"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pendencias e retornos</CardTitle>
+              <p className="text-sm text-muted-foreground">Crie tarefas avulsas ou use protocolos sugeridos para a especie.</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant="secondary" size="sm" onClick={() => addQuickReminder("follow_up")}>Retorno</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={() => addQuickReminder("vaccine")}>Vacina</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={() => addQuickReminder("imaging")}>Exame</Button>
+                <Button type="button" variant="secondary" size="sm" onClick={() => addQuickReminder("medication")}>Medicacao</Button>
+              </div>
+              <div className="mt-4 rounded-md border border-border bg-secondary-surface p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Protocolos sugeridos</div>
+                <div className="grid gap-2">
+                  {careProtocols.slice(0, 4).map((protocol) => (
+                    <button
+                      key={`${protocol.type}-${protocol.title}`}
+                      type="button"
+                      onClick={() => addProtocolReminder(protocol)}
+                      className="rounded-md border border-border bg-white px-3 py-2 text-left text-sm transition hover:border-primary hover:bg-white"
+                    >
+                      <span className="block font-semibold text-foreground">{protocol.title}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">Vence em {protocol.days} dia{protocol.days === 1 ? "" : "s"} | {protocol.priority === "high" ? "alta prioridade" : "prioridade normal"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4 max-h-72 space-y-3 overflow-auto pr-1">
+                {remindersLoading ? (
+                  <>
+                    <Skeleton className="h-16" />
+                    <Skeleton className="h-16" />
+                  </>
+                ) : reminders.length ? (
+                  reminders.map((reminder: any) => (
+                    <div key={reminder.id} className={`rounded-md border border-border p-3 ${reminder.is_done ? "bg-secondary-surface opacity-70" : "bg-white"}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-foreground">{reminder.title}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{reminder.reminder_type} | {reminder.due_date}</div>
+                        </div>
+                        {!reminder.is_done ? (
+                          <Button type="button" variant="ghost" size="icon" onClick={() => completeReminder.mutate(reminder.id)} aria-label="Concluir pendencia">
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                        ) : null}
+                      </div>
+                      {reminder.notes ? <p className="mt-2 text-sm text-muted-foreground">{reminder.notes}</p> : null}
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState title="Sem pendencias" description="Acoes rapidas criam lembretes de acompanhamento." />
+                )}
+              </div>
             </CardContent>
           </Card>
 

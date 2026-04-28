@@ -80,6 +80,16 @@ export const api = {
   createImagingFinding: (payload: any) => request('/imaging/findings', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   surgicalPlansByPatient: (patientId: string | number) => request(`/surgical-plans/by_patient/${patientId}`),
   createSurgicalPlan: (payload: any) => request('/surgical-plans/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  reminders: (params?: { dueBefore?: string; includeDone?: boolean }) => {
+    const search = new URLSearchParams()
+    if (params?.dueBefore) search.set('due_before', params.dueBefore)
+    if (params?.includeDone) search.set('include_done', 'true')
+    const suffix = search.toString() ? `?${search.toString()}` : ''
+    return request(`/reminders/${suffix}`)
+  },
+  remindersByPatient: (patientId: string | number) => request(`/reminders/by_patient/${patientId}`),
+  createReminder: (payload: any) => request('/reminders/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  updateReminder: (reminderId: string | number, payload: any) => request(`/reminders/${reminderId}`, { method: 'PATCH', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   refresh: async () => {
     const res = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', credentials: 'include' })
     if (!res.ok) {

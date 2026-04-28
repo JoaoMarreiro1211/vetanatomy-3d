@@ -61,7 +61,7 @@
 - Foco por regiao anatomica para reduzir ruido visual.
 - Orgaos internos esquematicos para comunicacao clinica.
 - Camada ossea esquematica com coluna, costelas, cranio e membros.
-- Rótulos anatomicos com opcao de mostrar/ocultar.
+- Rotulos anatomicos com opcao de mostrar/ocultar.
 - Orbit controls para rotacionar e aproximar.
 
 ## Anotacoes Clinicas
@@ -96,8 +96,26 @@
 - Total de pacientes cadastrados.
 - Total com biometria/peso.
 - Status do modulo anatomico.
+- Pendencias clinicas para hoje.
 - Fila clinica recente.
+- Lista de retornos, vacinas, exames e tarefas vencidas.
 - Pre-visualizacao anatomica 3D.
+
+## Lembretes e Standard of Care
+
+- Lembretes por paciente.
+- Tipos de pendencia:
+  - Retorno clinico
+  - Vacina
+  - Revisao de exame
+  - Conferencia de medicacao
+- Prioridade normal ou alta.
+- Data de vencimento.
+- Conclusao de pendencia pelo prontuario.
+- Dashboard operacional com pendencias do dia.
+- Seed automatico de lembretes para casos demonstrativos.
+- Protocolos sugeridos por grupo de especie no prontuario.
+- Acoes rapidas para transformar protocolo em tarefa acompanhavel.
 
 ## Dados de Demonstracao
 
@@ -112,7 +130,7 @@ O seed cria automaticamente pacientes de apresentacao:
 - `APRES-007` Lola, caprino
 - `APRES-008` Yoshi, reptil
 
-Cada caso possui cadastro, anotações 3D, exame, achado e plano.
+Cada caso possui cadastro, anotacoes 3D, exame, achado, plano e pendencias clinicas.
 
 ## Infraestrutura Gratuita
 

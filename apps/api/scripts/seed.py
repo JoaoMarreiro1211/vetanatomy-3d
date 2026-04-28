@@ -7,6 +7,7 @@ from app.models import (
     AnatomicalModelTemplate,
     AnatomicalRegion,
     Attachment,
+    ClinicalReminder,
     DICOMSeries,
     DICOMStudy,
     ImagingFinding,
@@ -195,6 +196,17 @@ DEMO_CASES = [
         "plan": ("Membro pelvico direito", "Controle de trauma e suporte ambiental", "Baixo", "Restricao de escalada, analgesia, substrato macio, reavaliacao radiografica se piora."),
     },
 ]
+
+REMINDER_BY_SPECIES = {
+    "dog": ("Reavaliacao ortopedica", "follow_up", "normal"),
+    "cat": ("Retorno com urinalise", "lab", "normal"),
+    "horse": ("Ultrassom de tendao", "imaging", "high"),
+    "cattle": ("Reavaliacao reprodutiva", "follow_up", "normal"),
+    "rabbit": ("Controle odontologico", "procedure", "high"),
+    "pet_bird": ("Reavaliacao respiratoria", "follow_up", "high"),
+    "goat": ("Controle de motilidade ruminal", "follow_up", "normal"),
+    "reptile": ("Revisao de trauma e manejo", "follow_up", "normal"),
+}
 
 
 def seed() -> None:
@@ -413,6 +425,21 @@ def seed() -> None:
                             "steps": steps,
                             "presentation_notes": "Caso demonstrativo criado para apresentacao do VetAnatomy 3D.",
                         },
+                        created_by=1,
+                    )
+                )
+                db.commit()
+
+            if not db.query(ClinicalReminder).filter(ClinicalReminder.patient_id == patient.id).first():
+                title, reminder_type, priority = REMINDER_BY_SPECIES.get(case["species"], ("Retorno clinico", "follow_up", "normal"))
+                db.add(
+                    ClinicalReminder(
+                        patient_id=patient.id,
+                        title=title,
+                        reminder_type=reminder_type,
+                        due_date=date(2026, 4, 28),
+                        priority=priority,
+                        notes=f"Pendencia demonstrativa vinculada ao caso {case['record_number']}.",
                         created_by=1,
                     )
                 )

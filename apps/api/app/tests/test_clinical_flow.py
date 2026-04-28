@@ -1,4 +1,5 @@
 from app.core.config import settings
+from datetime import date
 
 
 def test_patient_annotation_imaging_and_surgical_plan_flow(client):
@@ -88,10 +89,30 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     )
     assert plan_response.status_code == 200
 
+    reminder_response = client.post(
+        f"{settings.API_V1_STR}/reminders/",
+        json={
+            "patient_id": patient["id"],
+            "title": "Retorno clinico",
+            "reminder_type": "follow_up",
+            "due_date": date(2026, 5, 5).isoformat(),
+            "priority": "high",
+            "notes": "Reavaliar dor e exame.",
+        },
+    )
+    assert reminder_response.status_code == 200
+    reminder = reminder_response.json()
+    assert reminder["title"] == "Retorno clinico"
+
     assert len(client.get(f"{settings.API_V1_STR}/annotations/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/imaging/studies/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/imaging/findings/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/surgical-plans/by_patient/{patient['id']}").json()) == 1
+    assert len(client.get(f"{settings.API_V1_STR}/reminders/by_patient/{patient['id']}").json()) == 1
+
+    done = client.patch(f"{settings.API_V1_STR}/reminders/{reminder['id']}", json={"is_done": True})
+    assert done.status_code == 200
+    assert done.json()["is_done"] is True
 
     archived_patient = client.delete(f"{settings.API_V1_STR}/patients/{patient['id']}")
     assert archived_patient.status_code == 200
@@ -127,4 +148,14 @@ def test_clinical_records_reject_missing_parents(client):
     assert client.post(
         f"{settings.API_V1_STR}/surgical-plans/",
         json={"patient_id": 999, "structure": "Torax"},
+    ).status_code == 404
+
+    assert client.post(
+        f"{settings.API_V1_STR}/reminders/",
+        json={
+            "patient_id": 999,
+            "title": "Retorno invalido",
+            "reminder_type": "follow_up",
+            "due_date": date(2026, 5, 5).isoformat(),
+        },
     ).status_code == 404
