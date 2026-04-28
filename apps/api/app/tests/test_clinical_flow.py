@@ -26,7 +26,11 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     )
     assert upload_response.status_code == 200
     attachment = upload_response.json()
-    assert attachment["url"].startswith("/storage/")
+    assert attachment["url"].startswith(f"{settings.API_V1_STR}/attachments/")
+
+    file_response = client.get(attachment["url"])
+    assert file_response.status_code == 200
+    assert file_response.content == b"DICM test payload"
 
     annotation_response = client.post(
         f"{settings.API_V1_STR}/annotations/",

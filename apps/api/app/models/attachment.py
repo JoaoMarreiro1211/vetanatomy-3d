@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, LargeBinary
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 from app.utils.time import utc_now
@@ -11,6 +11,7 @@ class Attachment(Base):
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True)
     filename = Column(String, nullable=False)
     url = Column(String, nullable=False)
+    file_data = Column(LargeBinary, nullable=True)
     content_type = Column(String, nullable=True)
     size_bytes = Column(Integer, nullable=True)
     category = Column(String, nullable=True)
