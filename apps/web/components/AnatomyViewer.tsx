@@ -776,7 +776,7 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <div className="mt-1 text-white/60">Qualidade: {qualityPreset.label} | Ferramenta: {toolMode} | Marcacoes: {visibleAnnotations.length}</div>
       </div>
 
-      <div className="absolute right-4 top-[4.9rem] z-10 w-[min(21rem,calc(100%-2rem))] rounded-md border border-white/10 bg-[#07130E]/88 p-3 text-xs text-white shadow">
+      <div className="pointer-events-none absolute right-4 top-[4.9rem] z-10 w-[min(21rem,calc(100%-2rem))] rounded-md border border-white/10 bg-[#07130E]/88 p-3 text-xs text-white shadow">
         <StructurePanel structure={selectedStructure} />
       </div>
 
