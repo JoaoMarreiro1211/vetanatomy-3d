@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, Date, Boolean
 from sqlalchemy.orm import relationship
 
 from app.db.base import Base
@@ -16,6 +16,7 @@ class Patient(Base):
     birth_date = Column(Date, nullable=True)
     record_number = Column(String, unique=True, index=True)
     owner_id = Column(Integer, ForeignKey("tutors.id"))
+    is_archived = Column(Boolean, default=False)
 
     species = relationship("Species")
     breed = relationship("Breed")

@@ -67,6 +67,8 @@ export const api = {
   },
   patient: (patientId: string | number) => request(`/patients/${patientId}`),
   createPatient: (payload: any) => request('/patients/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  updatePatient: (patientId: string | number, payload: any) => request(`/patients/${patientId}`, { method: 'PATCH', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  archivePatient: (patientId: string | number) => request(`/patients/${patientId}`, { method: 'DELETE' }),
   annotationsByPatient: (patientId: string | number) => request(`/annotations/by_patient/${patientId}`),
   createAnnotation: (payload: any) => request('/annotations/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
   attachmentsByPatient: (patientId: string | number) => request(`/attachments/by_patient/${patientId}`),
@@ -96,6 +98,8 @@ export const api = {
   },
   users: () => request('/users/'),
   createUser: (payload: any) => request('/users/', { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  updateUser: (userId: string | number, payload: any) => request(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' } }),
+  deactivateUser: (userId: string | number) => request(`/users/${userId}`, { method: 'DELETE' }),
 }
 
 export default request

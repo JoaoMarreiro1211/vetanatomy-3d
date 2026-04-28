@@ -97,6 +97,33 @@ export default function PatientsPage() {
     },
   });
 
+  const updatePatient = useMutation({
+    mutationFn: ({ patientId, payload }: { patientId: number; payload: any }) => api.updatePatient(patientId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patients"] }),
+  });
+
+  const archivePatient = useMutation({
+    mutationFn: (patientId: number) => api.archivePatient(patientId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["patients"] }),
+  });
+
+  function editPatient(patient: Patient) {
+    const name = window.prompt("Nome do paciente", patient.name || "");
+    if (name === null) return;
+    const recordNumber = window.prompt("Numero do prontuario", patient.record_number || "");
+    if (recordNumber === null) return;
+    const weight = window.prompt("Peso em kg", patient.weight ? String(patient.weight) : "");
+    if (weight === null) return;
+    updatePatient.mutate({
+      patientId: patient.id,
+      payload: {
+        name,
+        record_number: recordNumber || null,
+        weight: weight ? Number(weight) : null,
+      },
+    });
+  }
+
   const groupSummary = groupFilter ? speciesGroups.find((group) => group.code === groupFilter)?.name : "Todos os grupos";
 
   return (
@@ -157,7 +184,7 @@ export default function PatientsPage() {
               {patients.map((patient) => {
                 const selectedSpecies = patient.species_id ? speciesById.get(patient.species_id) : undefined;
                 return (
-                  <Link key={patient.id} href={`/patients/${patient.id}`} className="grid gap-3 p-4 transition hover:bg-secondary-surface sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div key={patient.id} className="grid gap-3 p-4 transition hover:bg-secondary-surface sm:grid-cols-[1fr_auto] sm:items-center">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="font-semibold">{patient.name}</div>
@@ -168,8 +195,18 @@ export default function PatientsPage() {
                         Prontuario: {patient.record_number || "-"} | Especie: {patient.species_name || selectedSpecies?.common_name || "-"} | Peso: {patient.weight || "-"} kg
                       </div>
                     </div>
-                    <span className="text-sm font-semibold text-[#3D7B51]">Abrir prontuario</span>
-                  </Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={`/patients/${patient.id}`}>Abrir</Link>
+                      </Button>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => editPatient(patient)}>
+                        Editar
+                      </Button>
+                      <Button type="button" variant="danger" size="sm" onClick={() => archivePatient.mutate(patient.id)}>
+                        Arquivar
+                      </Button>
+                    </div>
+                  </div>
                 );
               })}
             </div>

@@ -56,9 +56,13 @@ function roundedPoint(point: Vector3): AnatomyPoint {
 function ClinicalAnimalModel({
   fallbackShape,
   onPick,
+  autoRotate,
+  layer,
 }: {
   fallbackShape: string;
   onPick: (point: AnatomyPoint) => void;
+  autoRotate: boolean;
+  layer: "surface" | "skeleton";
 }) {
   const groupRef = useRef<Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -67,7 +71,7 @@ function ClinicalAnimalModel({
   const isExotic = fallbackShape === "exotic";
 
   useFrame(() => {
-    if (groupRef.current) {
+    if (groupRef.current && autoRotate) {
       groupRef.current.rotation.y += hovered ? 0.0005 : 0.0012;
     }
   });
@@ -95,13 +99,32 @@ function ClinicalAnimalModel({
     >
       <mesh position={[0, 0.05, 0]} scale={bodyScale}>
         <sphereGeometry args={[1, 56, 36]} />
-        <meshStandardMaterial color={hovered ? "#DFF3E3" : "#EAF4EC"} roughness={0.58} metalness={0.04} />
+        <meshStandardMaterial color={hovered ? "#DFF3E3" : "#EAF4EC"} roughness={0.58} metalness={0.04} transparent={layer === "skeleton"} opacity={layer === "skeleton" ? 0.34 : 1} />
       </mesh>
 
       <mesh position={[isAvian ? 0.92 : 1.65, isAvian ? 0.23 : 0.18, 0]} scale={isAvian ? [0.38, 0.32, 0.32] : [0.58, 0.42, 0.4]}>
         <sphereGeometry args={[1, 42, 28]} />
-        <meshStandardMaterial color="#E5F0E8" roughness={0.6} />
+        <meshStandardMaterial color="#E5F0E8" roughness={0.6} transparent={layer === "skeleton"} opacity={layer === "skeleton" ? 0.38 : 1} />
       </mesh>
+
+      {layer === "skeleton" ? (
+        <>
+          <mesh position={[0.1, 0.35, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.035, 0.035, isLarge ? 1.75 : 1.35]}>
+            <cylinderGeometry args={[1, 1, 1, 16]} />
+            <meshStandardMaterial color="#F3FAF5" roughness={0.48} />
+          </mesh>
+          {[-0.7, -0.25, 0.25, 0.7].map((x) => (
+            <mesh key={`rib-${x}`} position={[x, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[0.018, 0.018, isLarge ? 0.78 : 0.58]}>
+              <torusGeometry args={[1, 0.12, 10, 28, Math.PI]} />
+              <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+            </mesh>
+          ))}
+          <mesh position={[1.52, 0.18, 0]} rotation={[0, 0, Math.PI / 2]} scale={[0.04, 0.04, 0.52]}>
+            <cylinderGeometry args={[1, 1, 1, 16]} />
+            <meshStandardMaterial color="#F3FAF5" roughness={0.5} />
+          </mesh>
+        </>
+      ) : null}
 
       {isAvian ? (
         <>
@@ -187,10 +210,42 @@ function AnnotationMarker({ annotation }: { annotation: Annotation }) {
   );
 }
 
+function SelectedPointMarker({ point }: { point: AnatomyPoint }) {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const scale = 1 + Math.sin(clock.elapsedTime * 4) * 0.08;
+      ref.current.scale.setScalar(scale);
+    }
+  });
+  return (
+    <group ref={ref} position={[point.x, point.y, point.z]}>
+      <mesh>
+        <sphereGeometry args={[0.095, 24, 24]} />
+        <meshStandardMaterial color="#FFFFFF" emissive="#8BB8A8" emissiveIntensity={0.45} />
+      </mesh>
+      <Html center distanceFactor={7}>
+        <div className="rounded-md border border-white/80 bg-white px-2 py-1 text-xs font-semibold text-[#1F2A22] shadow">
+          Novo ponto
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 export default function AnatomyViewer({ annotations = [], onPick, selectedPoint, template, patientLabel }: AnatomyViewerProps) {
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [layer, setLayer] = useState<"surface" | "skeleton">("surface");
   const visibleAnnotations = useMemo(() => annotations.filter((annotation) => annotation.geometry?.coordinates), [annotations]);
   const regions = template?.regions_map || defaultRegions;
   const fallbackShape = template?.fallback_shape || "quadruped";
+  const quickRegions: Array<{ key: string; label: string; point: AnatomyPoint }> = [
+    { key: "head", label: regions.head || "Cabeca", point: { x: 1.58, y: 0.62, z: 0 } },
+    { key: "thorax", label: regions.thorax || "Torax", point: { x: 0.38, y: 0.34, z: 0.28 } },
+    { key: "abdomen", label: regions.abdomen || "Abdomen", point: { x: -0.78, y: 0.18, z: 0.25 } },
+    { key: "limbs", label: regions.limbs || "Membros", point: { x: -0.25, y: -0.78, z: 0.28 } },
+  ];
 
   return (
     <div className="relative h-[30rem] w-full overflow-hidden rounded-md border border-border bg-[#102018] shadow-sm">
@@ -203,23 +258,47 @@ export default function AnatomyViewer({ annotations = [], onPick, selectedPoint,
         <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#D7B267]" /> Moderada</span>
         <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#D97C7C]" /> Grave</span>
       </div>
+      <div className="absolute right-4 top-4 z-10 flex flex-wrap justify-end gap-2 text-xs">
+        <button type="button" onClick={() => setAutoRotate((value) => !value)} className="rounded-md border border-white/15 bg-white/95 px-3 py-1.5 font-semibold text-[#1F2A22] shadow">
+          {autoRotate ? "Pausar" : "Girar"}
+        </button>
+        <button type="button" onClick={() => setShowLabels((value) => !value)} className="rounded-md border border-white/15 bg-white/95 px-3 py-1.5 font-semibold text-[#1F2A22] shadow">
+          {showLabels ? "Ocultar regioes" : "Mostrar regioes"}
+        </button>
+        <button type="button" onClick={() => setLayer((value) => (value === "surface" ? "skeleton" : "surface"))} className="rounded-md border border-white/15 bg-white/95 px-3 py-1.5 font-semibold text-[#1F2A22] shadow">
+          {layer === "surface" ? "Camada ossea" : "Superficie"}
+        </button>
+      </div>
+      <div className="absolute bottom-4 right-4 z-10 flex max-w-[52%] flex-wrap justify-end gap-2">
+        {quickRegions.map((region) => (
+          <button
+            key={region.key}
+            type="button"
+            onClick={() => onPick(region.point)}
+            className="rounded-md border border-white/15 bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-[#1F2A22] shadow"
+          >
+            {region.label}
+          </button>
+        ))}
+      </div>
       <Canvas camera={{ position: [0, 1.25, 5.4], fov: 42 }}>
         <color attach="background" args={["#102018"]} />
         <ambientLight intensity={0.9} />
         <directionalLight position={[4, 5, 3]} intensity={1.45} />
         <directionalLight position={[-3, 1, -2]} intensity={0.5} color="#DFF3E3" />
-        <ClinicalAnimalModel fallbackShape={fallbackShape} onPick={onPick} />
-        <RegionLabel label={regions.head || "Cabeca"} position={[1.58, 0.88, 0]} />
-        <RegionLabel label={regions.thorax || "Torax"} position={[0.34, 0.96, 0]} />
-        <RegionLabel label={regions.abdomen || "Abdomen"} position={[-0.86, 0.84, 0]} />
+        <ClinicalAnimalModel fallbackShape={fallbackShape} onPick={onPick} autoRotate={autoRotate} layer={layer} />
+        {showLabels ? (
+          <>
+            <RegionLabel label={regions.head || "Cabeca"} position={[1.58, 0.88, 0]} />
+            <RegionLabel label={regions.thorax || "Torax"} position={[0.34, 0.96, 0]} />
+            <RegionLabel label={regions.abdomen || "Abdomen"} position={[-0.86, 0.84, 0]} />
+          </>
+        ) : null}
         {visibleAnnotations.map((annotation) => (
           <AnnotationMarker key={annotation.id} annotation={annotation} />
         ))}
         {selectedPoint ? (
-          <mesh position={[selectedPoint.x, selectedPoint.y, selectedPoint.z]}>
-            <ringGeometry args={[0.11, 0.16, 32]} />
-            <meshBasicMaterial color="#DFF3E3" />
-          </mesh>
+          <SelectedPointMarker point={selectedPoint} />
         ) : null}
         <OrbitControls enableDamping enablePan={false} minDistance={3} maxDistance={8} />
       </Canvas>

@@ -18,6 +18,10 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     patient = patient_response.json()
     assert patient["name"] == "Luna"
 
+    updated_patient = client.patch(f"{settings.API_V1_STR}/patients/{patient['id']}", json={"weight": 13.1})
+    assert updated_patient.status_code == 200
+    assert updated_patient.json()["weight"] == 13.1
+
     upload_response = client.post(
         f"{settings.API_V1_STR}/attachments/upload",
         data={"patient_id": str(patient["id"]), "category": "dicom"},
@@ -88,6 +92,11 @@ def test_patient_annotation_imaging_and_surgical_plan_flow(client):
     assert len(client.get(f"{settings.API_V1_STR}/imaging/studies/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/imaging/findings/by_patient/{patient['id']}").json()) == 1
     assert len(client.get(f"{settings.API_V1_STR}/surgical-plans/by_patient/{patient['id']}").json()) == 1
+
+    archived_patient = client.delete(f"{settings.API_V1_STR}/patients/{patient['id']}")
+    assert archived_patient.status_code == 200
+    assert archived_patient.json()["is_archived"] is True
+    assert all(item["id"] != patient["id"] for item in client.get(f"{settings.API_V1_STR}/patients").json())
 
 
 def test_clinical_records_reject_missing_parents(client):

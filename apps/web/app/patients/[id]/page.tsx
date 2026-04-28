@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, ArrowLeft, ClipboardList, FileImage, Stethoscope } from "lucide-react";
+import { Activity, ArrowLeft, ClipboardList, FileImage, Printer, Stethoscope } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -211,12 +211,18 @@ export default function PatientPage({ params }: { params: { id: string } }) {
         title={patientLoading ? "Carregando paciente..." : patient?.name || "Paciente"}
         description={`Registro ${patient?.record_number || "-"} | ${patient?.species_name || "Especie pendente"} | ${patient?.species_group_label || "Grupo nao definido"}`}
         actions={
-          <Button asChild variant="secondary">
-            <Link href="/patients">
-              <ArrowLeft className="h-4 w-4" />
-              Pacientes
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="secondary" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" />
+              Exportar PDF
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/patients">
+                <ArrowLeft className="h-4 w-4" />
+                Pacientes
+              </Link>
+            </Button>
+          </div>
         }
       />
 

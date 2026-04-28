@@ -80,3 +80,7 @@ API_URL=https://api.example.com WEB_URL=https://app.example.com sh infra/scripts
 6. Registrar tipo, severidade e notas.
 7. Subir imagem DICOM ou imagem diagnostica.
 8. Consultar historico, imagem e planejamento cirurgico no prontuario.
+
+## Funcionalidades
+
+A lista completa de recursos para apresentacao esta em `docs/FUNCIONALIDADES.md`.

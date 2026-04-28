@@ -47,6 +47,32 @@ export default function AdminUsersPage() {
     },
   });
 
+  const updateUser = useMutation({
+    mutationFn: ({ userId, payload }: { userId: number; payload: any }) => api.updateUser(userId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  const deactivateUser = useMutation({
+    mutationFn: (userId: number) => api.deactivateUser(userId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
+  function editUser(user: any) {
+    const fullName = window.prompt("Nome completo", user.full_name || "");
+    if (fullName === null) return;
+    const email = window.prompt("Email", user.email || "");
+    if (email === null) return;
+    const password = window.prompt("Nova senha temporaria (opcional)", "");
+    updateUser.mutate({
+      userId: user.id,
+      payload: {
+        full_name: fullName,
+        email,
+        ...(password ? { password } : {}),
+      },
+    });
+  }
+
   const admins = users.filter((user: any) => user.is_superuser).length;
   const activeUsers = users.filter((user: any) => user.is_active).length;
 
@@ -136,6 +162,31 @@ export default function AdminUsersPage() {
                     <div className="flex items-center gap-2">
                       <Badge variant={user.is_active ? "success" : "warning"}>{user.is_active ? "Ativo" : "Inativo"}</Badge>
                       {user.is_superuser ? <Badge>Admin</Badge> : <Badge variant="muted">Equipe</Badge>}
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:basis-full">
+                      <Button type="button" variant="secondary" size="sm" onClick={() => editUser(user)}>
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => updateUser.mutate({ userId: user.id, payload: { is_superuser: !user.is_superuser } })}
+                      >
+                        {user.is_superuser ? "Remover admin" : "Tornar admin"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={user.is_active ? "danger" : "secondary"}
+                        size="sm"
+                        onClick={() =>
+                          user.is_active
+                            ? deactivateUser.mutate(user.id)
+                            : updateUser.mutate({ userId: user.id, payload: { is_active: true } })
+                        }
+                      >
+                        {user.is_active ? "Excluir" : "Reativar"}
+                      </Button>
                     </div>
                   </div>
                 ))}

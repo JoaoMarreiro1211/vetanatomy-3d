@@ -63,3 +63,16 @@ def test_superuser_can_create_admin_user(client, db_session):
     assert response.status_code == 200
     assert response.json()["email"] == "created-admin@example.com"
     assert response.json()["is_superuser"] is True
+
+    updated = client.patch(
+        f"{settings.API_V1_STR}/users/{response.json()['id']}",
+        json={"full_name": "Updated Admin", "is_superuser": False, "password": "newpass123"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["full_name"] == "Updated Admin"
+    assert updated.json()["is_superuser"] is False
+
+    deleted = client.delete(f"{settings.API_V1_STR}/users/{response.json()['id']}", headers={"Authorization": f"Bearer {token}"})
+    assert deleted.status_code == 200
+    assert deleted.json()["is_active"] is False

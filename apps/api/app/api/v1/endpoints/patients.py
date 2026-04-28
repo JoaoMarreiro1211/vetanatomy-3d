@@ -3,7 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
 from app.db.session import get_db
-from app.schemas.patient import PatientCreate, PatientRead
+from app.schemas.patient import PatientCreate, PatientRead, PatientUpdate
 from app.models import Patient, Species, SpeciesGroup
 
 router = APIRouter()
@@ -32,6 +32,7 @@ def list_patients(
     db: Session = Depends(get_db),
 ):
     query = db.query(Patient).options(joinedload(Patient.species).joinedload(Species.group))
+    query = query.filter(Patient.is_archived.is_(False))
     if species_id:
         query = query.filter(Patient.species_id == species_id)
     if group:
@@ -48,4 +49,36 @@ def get_patient(patient_id: int, db: Session = Depends(get_db)):
     patient = db.query(Patient).options(joinedload(Patient.species).joinedload(Species.group)).filter(Patient.id == patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+    return patient
+
+
+@router.patch("/{patient_id}", response_model=PatientRead)
+def update_patient(patient_id: int, patient_in: PatientUpdate, db: Session = Depends(get_db)):
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    data = patient_in.model_dump(exclude_unset=True)
+    if data.get("species_id") and not db.query(Species).filter(Species.id == data["species_id"]).first():
+        raise HTTPException(status_code=404, detail="Species not found")
+    for key, value in data.items():
+        setattr(patient, key, value)
+    db.add(patient)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Patient record number already exists")
+    db.refresh(patient)
+    return patient
+
+
+@router.delete("/{patient_id}", response_model=PatientRead)
+def archive_patient(patient_id: int, db: Session = Depends(get_db)):
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    patient.is_archived = True
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
     return patient
