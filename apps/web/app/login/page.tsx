@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../lib/store/authStore";
@@ -17,20 +16,21 @@ export default function LoginPage() {
   const { register, handleSubmit, formState } = useForm<LoginForm>();
   const setTokens = useAuthStore((state) => state.setTokens);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   async function onSubmit(data: LoginForm) {
     setError("");
     try {
       const res = await api.login(data.email, data.password);
       setTokens(res.access_token);
-      router.push("/dashboard");
+      router.push(searchParams.get("next") || "/dashboard");
     } catch {
       setError("Nao foi possivel entrar. Confira email e senha.");
     }
   }
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-57px)] max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[1fr_28rem] lg:items-center">
+    <main className="mx-auto grid min-h-screen max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[1fr_28rem] lg:items-center">
       <section>
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700">Acesso clinico</p>
         <h1 className="mt-4 max-w-3xl text-5xl font-bold leading-tight text-slate-950">
@@ -79,12 +79,7 @@ export default function LoginPage() {
             {formState.isSubmitting ? "Entrando..." : "Entrar"}
           </button>
         </form>
-        <p className="mt-5 text-center text-sm text-slate-600">
-          Ainda nao tem conta?{" "}
-          <Link href="/register" className="font-semibold text-cyan-700 hover:text-cyan-800">
-            Criar acesso
-          </Link>
-        </p>
+        <p className="mt-5 text-center text-sm text-slate-600">Acesso restrito a equipe autorizada.</p>
       </section>
     </main>
   );

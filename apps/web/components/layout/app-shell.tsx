@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   Bell,
@@ -17,7 +17,7 @@ import {
   Stethoscope,
   X,
 } from "lucide-react";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 import { api } from "../../lib/api";
 import { useAuthStore } from "../../lib/store/authStore";
@@ -37,9 +37,50 @@ const navigation = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const token = useAuthStore((state) => state.accessToken);
+  const setTokens = useAuthStore((state) => state.setTokens);
   const logout = useAuthStore((state) => state.logout);
+  const isLogin = pathname === "/login";
+
+  useEffect(() => {
+    let active = true;
+
+    async function ensureSession() {
+      if (isLogin) {
+        if (token) router.replace("/dashboard");
+        if (active) setCheckingAuth(false);
+        return;
+      }
+
+      if (token) {
+        if (pathname === "/") router.replace("/dashboard");
+        if (active) setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const refreshed = await api.refresh();
+        const access = refreshed.access_token || refreshed.access || null;
+        if (!access) throw new Error("Missing access token");
+        setTokens(access);
+        if (pathname === "/") router.replace("/dashboard");
+        if (active) setCheckingAuth(false);
+      } catch {
+        logout();
+        const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+        router.replace(`/login${next}`);
+        if (active) setCheckingAuth(false);
+      }
+    }
+
+    ensureSession();
+    return () => {
+      active = false;
+    };
+  }, [isLogin, logout, pathname, router, setTokens, token]);
 
   async function handleLogout() {
     try {
@@ -48,6 +89,33 @@ export function AppShell({ children }: { children: ReactNode }) {
       // Local logout should clear the UI state even if the API is offline.
     }
     logout();
+    router.replace("/login");
+  }
+
+  if (checkingAuth) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-6 text-center">
+        <div>
+          <div className="text-lg font-bold text-foreground">VetAnatomy 3D</div>
+          <div className="mt-2 text-sm text-muted-foreground">Verificando acesso...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLogin) {
+    return <>{children}</>;
+  }
+
+  if (!token) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background px-6 text-center">
+        <div>
+          <div className="text-lg font-bold text-foreground">Acesso restrito</div>
+          <div className="mt-2 text-sm text-muted-foreground">Redirecionando para o login...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
