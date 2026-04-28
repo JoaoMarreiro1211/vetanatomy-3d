@@ -1,5 +1,6 @@
+import json
 import secrets
-from typing import List, Optional, Union
+from typing import Optional
 
 from pydantic import AnyHttpUrl, field_validator, ValidationInfo
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,24 +16,19 @@ class Settings(BaseSettings):
     SERVER_HOST: AnyHttpUrl = "http://localhost"
     PROJECT_NAME: str = "VetAnatomy 3D"
 
-    # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
-    # e.g: '["http://localhost:3000", "http://localhost:8080"]'
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-    ]
+    # Accepts a JSON list, comma-separated values, or a single origin.
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000"
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def assemble_cors_origins(
-        cls, v: Union[str, List[str]]
-    ) -> Union[List[str], str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+    @property
+    def cors_origins(self) -> list[str]:
+        raw = self.BACKEND_CORS_ORIGINS.strip().replace('\\"', '"')
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                return [str(origin).rstrip("/") for origin in parsed if str(origin).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
 
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
