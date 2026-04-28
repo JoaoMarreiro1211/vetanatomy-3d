@@ -80,6 +80,14 @@
 - Modo Raio-X com transparencia seletiva.
 - Exploded view para separar camadas anatomicas.
 - Corte 3D em tempo real por eixo X, Y ou Z.
+- Corte obliquo para regioes como cranio e acessos angulados.
+- Presets de corte clinico: toracico, abdominal e craniano.
+- Modo slab para isolar uma faixa anatomica entre dois planos.
+- Raycasting por estrutura anatomica com ficha de sistema, achados comuns e notas cirurgicas.
+- Highlight da estrutura selecionada.
+- Ferramenta de medidas 3D por distancia.
+- Ferramenta de angulo com tres pontos.
+- Desenho visual das medidas diretamente no modelo.
 - Simulacao fisiologica visual com batimento cardiaco, respiracao e fluxo vascular.
 - Presets de qualidade Eco, Clinico e Ultra para rodar em computadores e celulares diferentes.
 - Orbit controls para rotacionar e aproximar.
